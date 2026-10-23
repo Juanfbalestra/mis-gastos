@@ -514,7 +514,7 @@ body.selecting main { padding-bottom: 210px; }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 15 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 16 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -756,7 +756,7 @@ body.selecting main { padding-bottom: 210px; }
   }
   // Tono pastel fijo por categoría (sale del id, así no cambia de color entre meses)
   const hue = (k) => { let h = 0; for (const ch of String(k)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
-  const payEmoji = (p) => /efectivo/i.test(p) ? '💵' : /mercado|mp\b/i.test(p) ? '📱' : /transf/i.test(p) ? '🔁' : /d[eé]bito/i.test(p) ? '🏧' : '💳';
+  const payEmoji = (p) => /efectivo/i.test(p) ? '💵' : /mercado|mp\b/i.test(p) ? '📱' : /cuenta|banco/i.test(p) ? '🏦' : /transf/i.test(p) ? '🔁' : /d[eé]bito/i.test(p) ? '🏧' : '💳';
   function countUp(el, to) {
     const from = el._v || 0; el._v = to;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches || from === to) { el.textContent = money(to); return; }
@@ -1448,7 +1448,7 @@ body.selecting main { padding-bottom: 210px; }
   // ---------- Importar resumen de tarjeta ----------
   // Palabras clave → categoría. Las que el usuario corrige se guardan en state.rules y pisan a estas.
   const BASE_RULES = {
-    banco: ['IMPUESTO', 'IMP ', 'IVA', 'SELLOS', 'PERCEP', 'PERCEPCION', 'RETENCION', 'INTERES', 'COMISION', 'CARGO', 'MANTENIMIENTO', 'SEGURO DE VIDA', 'DB.RG', 'DB RG', 'IIBB', 'PAIS', 'ARCA', 'AFIP', 'RENTAS'],
+    banco: ['IMPUESTO', 'IMP ', 'IVA', 'SELLOS', 'PERCEP', 'PERCEPCION', 'RETENCION', 'INTERES', 'COMISION', 'CARGO', 'MANTENIMIENTO', 'SEGURO DE VIDA', 'DB.RG', 'DB RG', 'IIBB', 'PAIS!', 'ARCA!', 'AFIP!', 'RENTAS'],
     super: ['CARREFOUR', 'COTO', 'JUMBO', 'DISCO', 'VEA', 'CHANGOMAS', 'DIA ', 'SUPERMERC', 'MAXICONSUMO', 'VITAL', 'ALMACEN', 'AUTOSERVICIO', 'MAKRO', 'LA ANONIMA', 'DIETETICA', 'CARNIC', 'VERDULER', 'FIAMBRER', 'PANADER'],
     comida: ['RAPPI', 'PEDIDOSYA', 'PEDIDOS YA', 'MCDONALD', 'BURGER', 'MOSTAZA', 'RESTAUR', 'PARRILLA', 'PIZZ', 'CAFE', 'STARBUCKS', 'HAVANNA', 'HELAD', 'GRIDO', 'FREDDO'],
     auto: ['YPF', 'APPYPF', 'SHELL', 'AXION', 'PUMA', 'GULF', 'ESTACION DE SERV', 'PEAJE', 'AUTOPISTA', 'TELEPEAJE', 'ESTACIONAM', 'LUBRIC', 'NEUMATIC'],
@@ -1471,11 +1471,12 @@ body.selecting main { padding-bottom: 210px; }
   const norm = (s) => s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   // Clave para recordar la categoría: primeras 2 palabras "de verdad" del comercio
   // Palabras cortas tienen que coincidir enteras ("EPE" no debe matchear "PEPE"); las largas pueden ser prefijo ("RESTAUR")
-  // "~XXX" = puede aparecer en el medio de una palabra ("IRONSIDEFITN")
+  // "~XXX" = puede aparecer en el medio de una palabra ("IRONSIDEFITN"); "XXX!" = tiene que ser la palabra entera ("ARCA" no es "ARCADIA")
   const kwRe = (w) => {
-    const any = w.startsWith('~'); w = w.replace('~', '').trim();
+    const any = w.startsWith('~'), whole = w.endsWith('!');
+    w = w.replace('~', '').replace('!', '').trim();
     const e = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp((any ? '' : '(^|[^A-Z])') + e + (!any && w.length <= 3 ? '(?![A-Z])' : ''));
+    return new RegExp((any ? '' : '(^|[^A-Z])') + e + (!any && (whole || w.length <= 3) ? '(?![A-Z])' : ''));
   };
   const TAX = /IMPUESTO|SELLOS|\bIVA\b|PERCEP|INTERES|COMISION|IIBB|DB\.? ?RG/i;
   const ruleKey = (desc) => norm(desc).replace(/[^A-Z ]/g, ' ').split(' ').filter(w => w.length > 2).slice(0, 2).join(' ');
@@ -1617,6 +1618,52 @@ body.selecting main { padding-bottom: 210px; }
     return meta;
   }
 
+  // ---------- Resumen de cuenta bancaria Santander ("Mi resumen de cuenta") ----------
+  // Renglón: "DD/MM/AA [comprobante] Tipo de movimiento  -$ importe  $ saldo"; el renglón siguiente trae el detalle
+  // (comercio, empresa del débito automático o destinatario). Solo se toman las salidas en pesos.
+  const isStCuenta = (text) => /Mi resumen de cuenta/i.test(text) && /Movimientos en pesos/i.test(text) && /SANTANDER/i.test(text);
+  const ST_LINE = /^(\d{2})\/(\d{2})\/(\d{2,4})\s+(?:\d{3,}\s+)?(.+?)\s+(-?)\$\s?([\d.]+,\d{2})\s+\$\s?-?[\d.]+,\d{2}$/;
+  const ST_NOISE = /^(Banco Santander|correlativo|tampoco|\d+ - \d+$|\* Salvo|--- p|Fecha\s+Comprobante|Movimientos en|Saldo total)/i;
+  function parseStCuenta(text) {
+    let lines = text.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const a = lines.findIndex(l => /^Movimientos en pesos/i.test(l));
+    const b = lines.findIndex((l, i) => i > a && /^Saldo total/i.test(l));   // después vienen dólares y tarjetas
+    lines = lines.slice(a + 1, b > a ? b : undefined);
+    const out = [];
+    lines.forEach((l, idx) => {
+      const m = l.match(ST_LINE); if (!m || m[5] !== '-') return;   // solo salidas
+      const tipo = m[4].trim(), next = lines[idx + 1] || '';
+      const det = !ST_LINE.test(next) && !ST_NOISE.test(next) ? next : '';
+      const t = norm(tipo);
+      const why = /TRANSFERENCIA|ENVIO DE DINERO|DEBIN/.test(t) ? (/MERCADO PAGO/i.test(det) ? 'Envío a tu Mercado Pago: lo que pagues desde ahí entra con su resumen' : 'Transferencia: no se importa (tildala si fue un gasto)')
+        : /PAGO DE TARJETA/.test(t) ? 'Pago de tarjeta (ya viene en su resumen)'
+        : /PLAZO FIJO|INVERSION|COMPRA DE (DOLARES|MONEDA)|SUSCRIPCION FCI|FONDO COMUN/.test(t) ? 'Inversión / ahorro'
+        : /EXTRACCION/.test(t) ? 'Extracción de efectivo: cargá a mano en qué la gastaste'
+        : '';
+      // Descripción: para compras y débitos, el comercio del renglón de detalle; para transferencias, el destinatario
+      let desc = tipo;
+      if (det && /COMPRA|DEBITO AUTOMATICO|PAGO DE SERVICIO|PAGO MIS CUENTAS|PAGO DE IMPUESTO/.test(t)) {
+        desc = det.replace(/\s*-\s*tarj\.? nro\.?\s*\d+/i, '').replace(/\d{6,}/g, ' ').replace(PROC, '').replace(/[*_]+/g, ' ').replace(/[\s\-]+$/, '').replace(/\s+/g, ' ').trim() || tipo;
+      } else if (det && /TRANSFERENCIA|ENVIO/.test(t)) {
+        desc = `${tipo} · ${det.replace(/^A\s+/i, '').split('/')[0].replace(/\s+\d[\d ]*$/, '').trim()}`;
+      }
+      if (desc === desc.toUpperCase()) desc = desc.toLowerCase();
+      desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+      if (/^IVA\b/.test(t)) desc = 'IVA';
+      let y = +m[3]; if (y < 100) y += 2000;
+      out.push({ date: `${y}-${m[2]}-${m[1]}`, desc, amount: parseAmount(m[6]), why });
+    });
+    return out;
+  }
+  function stMeta(text) {
+    const meta = { brand: 'Cuenta Santander', rgBase: 0 };
+    const h = text.match(/Hasta:\s*(\d{2})\/(\d{2})\/(\d{2,4})/i);
+    if (h) { let y = +h[3]; if (y < 100) y += 2000; meta.closing = `${y}-${h[2]}-${h[1]}`; }
+    const tot = text.match(/^Total:\s*\$\s?([\d.]+,\d{2})/im);   // total de salidas en pesos del período
+    if (tot) meta.salidas = parseAmount(tot[1]);
+    return meta;
+  }
+
   // Datos de cabecera: cierre, marca, total a pagar y base de la percepción RG 5617 (sirve para sacar el dólar)
   function detectMeta(text) {
     const meta = {};
@@ -1668,17 +1715,17 @@ body.selecting main { padding-bottom: 210px; }
   const NO_SALE = (cat) => `No sale de tu bolsillo (${catById(cat).name}): no se importa`;
   let impMeta = {};
   function analyze(text) {
-    const mp = isMP(text);
-    const meta = mp ? mpMeta(text) : detectMeta(text);
+    const mp = isMP(text), st = !mp && isStCuenta(text), cuenta = mp || st;
+    const meta = mp ? mpMeta(text) : st ? stMeta(text) : detectMeta(text);
     const found = [];
     if (meta.closing && !$('iDate').dataset.touched) { $('iDate').value = meta.closing; found.push(`cierre ${meta.closing.split('-').reverse().join('/')}`); }
     if (meta.brand) {
       let p = state.pays.find(x => norm(x).includes(norm(meta.brand)));
       if (!p) { state.pays.push(p = meta.brand); persist(); renderSettings(); $('iPay').innerHTML = state.pays.map(x => `<option>${esc(x)}</option>`).join(''); }
-      $('iPay').value = p; found.push(`${mp ? 'cuenta' : 'tarjeta'} ${p}`);
+      $('iPay').value = p; found.push(`${cuenta ? 'cuenta' : 'tarjeta'} ${p}`);
     }
     const pay = $('iPay').value, stmt = $('iDate').value || todayStr();
-    const rows = mp ? parseMP(text) : parseStatement(text, stmt);
+    const rows = mp ? parseMP(text) : st ? parseStCuenta(text) : parseStatement(text, stmt);
     if (!rows.length) { toast('No encontré consumos. Probá pegando el texto.'); return; }
     // Dólar: el que escribiste, o el que surge de la percepción RG 5617 (base en pesos / consumos en USD)
     const usdSum = rows.filter(r => r.isUsd && !r.negative).reduce((a, r) => a + r.amount, 0);
@@ -1687,12 +1734,12 @@ body.selecting main { padding-bottom: 210px; }
     rows.forEach(r => { if (r.isUsd) { r.usd = r.amount; r.amount = rate > 0 ? r.amount * rate : NaN; } });
     // Control: lo encontrado en pesos tiene que sumar el total a pagar
     let check = '';
-    if (mp && meta.salidas) {
+    if (cuenta && meta.salidas) {
       const sum = sumOf(rows), out = rows.filter(r => r.why);
       check = (Math.abs(sum - meta.salidas) < 1
         ? `✅ Cuadra con las salidas del resumen: ${money(meta.salidas)}.`
         : `⚠️ Sumé ${money(sum)} y el resumen dice ${money(meta.salidas)} de salidas. Puede faltar algún movimiento.`) +
-        (out.length ? ` Dejé sin tildar ${out.length} (${money(sumOf(out))}) que no son gastos o ya entran por otro lado: pagos de tarjeta, reservas, transferencias a vos mismo o inversiones.` : '');
+        (out.length ? ` Dejé sin tildar ${out.length} (${money(sumOf(out))}) que no son gastos o ya entran por otro lado: ${st ? 'transferencias, envíos a tu Mercado Pago, pagos de tarjeta o inversiones' : 'pagos de tarjeta, reservas, transferencias a vos mismo o inversiones'}.` : '');
     } else if (meta.totalPesos) {
       const sum = rows.filter(r => !r.isUsd).reduce((a, r) => a + (r.negative ? -r.amount : r.amount), 0);
       check = Math.abs(sum - meta.totalPesos) < 1
