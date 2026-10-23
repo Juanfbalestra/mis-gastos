@@ -511,7 +511,7 @@ body.selecting main { padding-bottom: 210px; }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 13 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 14 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -658,8 +658,9 @@ body.selecting main { padding-bottom: 210px; }
     ['seguros', '🛡️', 'Seguros'],
     ['mascotas', '🐶', 'Mascotas'],
     ['deporte', '🏋️', 'Deporte / club'],
-    ['limpieza', '🧹', 'Limpieza departamento', true],   // true = no suma en mis gastos
+    ['limpieza', '🧹', 'Limpieza departamento'],
     ['banco', '🏦', 'Impuestos y comisiones'],
+    ['terceros', '🤝', 'Plata de terceros', true],   // true = no suma: pasa por tus cuentas pero no sale de tu sueldo
     ['otros', '📦', 'Otros'],
   ].map(([id, emoji, name, fuera]) => ({ id, emoji, name, ...(fuera ? { fuera: true } : {}) }));
   const DEFAULT_PAYS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
@@ -681,6 +682,22 @@ body.selecting main { padding-bottom: 210px; }
           if (!s.cats.some(c => c.id === 'limpieza')) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === 'limpieza'));
           s.catsV = 3;
         }
+        // v4: "Limpieza departamento" vuelve a sumar y aparece "Plata de terceros" (no suma).
+        // Lo aprendido para Limpieza que ya no tiene movimientos ahí (lo que se borró por no ser propio)
+        // pasa a "Plata de terceros"; lo que sí tiene movimientos (gasto real de limpieza) queda en Limpieza.
+        if (s.cats && s.catsV < 4) {
+          const lim = s.cats.find(c => c.id === 'limpieza');
+          const eraNoSuma = lim && lim.fuera;
+          if (lim) delete lim.fuera;
+          if (!s.cats.some(c => c.id === 'terceros')) s.cats.splice(s.cats.length - 1, 0, { ...DEFAULT_CATS.find(c => c.id === 'terceros') });
+          if (eraNoSuma && s.rules) {
+            const key = (note) => note.replace(/\s*\((?:cuota|U\$S)[^)]*\)/gi, '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+              .replace(/[^A-Z ]/g, ' ').split(' ').filter(w => w.length > 2).slice(0, 2).join(' ');
+            const enUso = new Set((s.items || []).filter(i => i.cat === 'limpieza' && i.note).map(i => key(i.note)));
+            Object.keys(s.rules).forEach(k => { if (s.rules[k] === 'limpieza' && !enUso.has(k)) s.rules[k] = 'terceros'; });
+          }
+          s.catsV = 4;
+        }
         // Una sola vez: los resúmenes importados antes de existir "mes" pasan al mes que les corresponde.
         // Se toma la última fecha de cada resumen (≈ cierre): si es hasta el día 15, cuenta en el mes anterior.
         if (!s.mesV && Array.isArray(s.items)) {
@@ -698,10 +715,10 @@ body.selecting main { padding-bottom: 210px; }
           });
           s.mesV = 1;
         }
-        return { catsV: 3, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income, myName: s.myName, pin: s.pin };
+        return { catsV: 4, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income, myName: s.myName, pin: s.pin };
       }
     } catch (e) {}
-    return { catsV: 3, mesV: 1, cats: DEFAULT_CATS.map(c => ({ ...c })), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
+    return { catsV: 4, mesV: 1, cats: DEFAULT_CATS.map(c => ({ ...c })), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
   }
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
