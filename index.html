@@ -30,6 +30,11 @@
   --up: #be123c;
   --down: #047857;
   --shadow: 0 8px 24px rgba(76, 29, 149, .10);
+  /* Colores de la torta (paleta categórica validada) y "Resto" */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+  --s-rest: #b8b2c8;
+  /* Estados de presupuesto */
+  --ok: #047857; --warn: #b45309; --bad: #be123c;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -46,6 +51,9 @@
     --up: #fda4af;
     --down: #6ee7b7;
     --shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+    --s-rest: #4e4866;
+    --ok: #34d399; --warn: #fbbf24; --bad: #fb7185;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -221,6 +229,75 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
 .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--line); margin-left: 4px; }
 .tag.warn { background: #fde68a; color: #78350f; }
 .imp-sum { position: sticky; bottom: 0; background: var(--card); padding-top: 8px; }
+
+/* El sheet de carga va por encima del detalle de categoría */
+#sheetBg { z-index: 14; } #sheet { z-index: 15; }
+button.cat-row { width: 100%; text-align: left; border-radius: 12px; }
+button.cat-row:active { background: var(--bg); }
+.chev { color: var(--muted); font-weight: 700; }
+.dl { font-weight: 700; }
+.dl.up { color: var(--up); } .dl.down { color: var(--down); }
+
+/* Torta */
+.donut-wrap { display: grid; grid-template-columns: 136px 1fr; gap: 14px; align-items: center; margin: 2px 0 14px; }
+@media (max-width: 350px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } }
+.donut { width: 136px; height: 136px; position: relative; }
+.donut svg { width: 100%; height: 100%; transform: rotate(-90deg); animation: spin-in .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes spin-in { from { transform: rotate(-200deg) scale(.85); opacity: 0; } }
+.donut circle { cursor: pointer; transition: stroke-width .15s; }
+.donut circle:hover { stroke-width: 7.6; }
+.donut-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; padding: 30px; }
+.donut-center small { display: block; color: var(--muted); font-size: 11px; line-height: 1.2; }
+.donut-center b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.legend { display: grid; gap: 4px; font-size: 13px; min-width: 0; width: 100%; }
+.legend button { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; text-align: left; padding: 4px 2px; border-radius: 8px; }
+.legend button:active { background: var(--bg); }
+.legend i { width: 12px; height: 12px; border-radius: 4px; }
+.legend span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Evolución mensual */
+.evo { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; height: 160px; }
+.evo button { display: flex; flex-direction: column; align-items: center; height: 100%; gap: 4px; min-width: 0; }
+.evo .track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; min-height: 0; border-bottom: 1px solid var(--line); }
+.evo .col { width: 100%; max-width: 32px; border-radius: 4px 4px 0 0; background: var(--accent); opacity: .3; transform-origin: bottom; animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.evo .on .col { opacity: 1; }
+.evo .v { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+.evo .on .v { color: var(--text); }
+.evo .m { font-size: 12px; color: var(--muted); }
+.evo .on .m { color: var(--text); font-weight: 700; }
+@keyframes rise { from { transform: scaleY(0); } }
+
+/* Presupuestos */
+.bud { display: block; width: 100%; text-align: left; padding: 8px 0 10px; border-bottom: 1px solid var(--line); }
+.bud:last-child { border-bottom: 0; }
+.bud-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.bud-top span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bud-top b { color: var(--text); }
+.bud-bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 7px 0 5px; }
+.bud-bar i { display: block; height: 100%; border-radius: 4px; transform-origin: left; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; }
+.bud-bar.ok i { background: var(--ok); } .bud-bar.warn i { background: var(--warn); } .bud-bar.bad i { background: var(--bad); }
+.bud-st { font-size: 12px; font-weight: 600; }
+.bud-st.ok { color: var(--ok); } .bud-st.warn { color: var(--warn); } .bud-st.bad { color: var(--bad); }
+
+/* Detalle de categoría */
+.big-amt { font-size: 34px; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.bud-edit { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.btn-small { padding: 10px 16px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+#catBody .mov { box-shadow: none; border: 1px solid var(--line); }
+
+/* Buscador y filtros */
+.filters { display: grid; gap: 8px; margin-bottom: 10px; }
+input[type=search] {
+  width: 100%; font: inherit; color: var(--text); background: var(--card); border: 1.5px solid var(--line);
+  border-radius: 14px; padding: 11px 14px; box-shadow: var(--shadow); -webkit-appearance: none;
+}
+input[type=search]:focus { outline: none; border-color: var(--accent); }
+.filters select { background: var(--card); font-size: 14px; padding: 9px 10px; }
+.filters .chip { padding: 6px 12px; font-size: 13px; }
+.filter-sum { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 2px 4px; flex-wrap: wrap; }
+.filter-sum b { color: var(--text); margin-left: auto; font-size: 16px; font-variant-numeric: tabular-nums; }
+.filter-sum button { color: var(--accent); font-weight: 600; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -252,6 +329,19 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
       <h2>¿En qué se fue?</h2>
       <div id="byCat"></div>
     </div>
+    <div class="card" id="topCard" hidden>
+      <h2>¿Dónde más gastás?</h2>
+      <div id="topM"></div>
+    </div>
+    <div class="card" id="budCard">
+      <h2>Presupuestos del mes</h2>
+      <div id="buds"></div>
+    </div>
+    <div class="card">
+      <h2>Últimos 6 meses</h2>
+      <div id="evo"></div>
+      <p class="hint" id="evoHint" style="margin:10px 0 0"></p>
+    </div>
     <div class="card">
       <h2>¿Cómo pagaste?</h2>
       <div id="byPay"></div>
@@ -261,6 +351,15 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
   <!-- MOVIMIENTOS -->
   <section id="view-movs" hidden>
     <button class="imp-btn" id="openImp">📄 Importar resumen de tarjeta</button>
+    <div class="filters">
+      <input type="search" id="fq" placeholder="🔎 Buscar comercio, detalle o categoría…" autocomplete="off">
+      <div class="chips" id="fPeriod"></div>
+      <div class="row2">
+        <select id="fCat" aria-label="Filtrar por categoría"></select>
+        <select id="fPay" aria-label="Filtrar por medio de pago"></select>
+      </div>
+      <div class="filter-sum" id="fSum"></div>
+    </div>
     <div id="movs"></div>
   </section>
 
@@ -343,6 +442,13 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
   </div>
 </div>
 
+<!-- Sheet detalle de categoría -->
+<div class="sheet-bg" id="catBg"></div>
+<div class="sheet" id="catSheet" role="dialog" aria-modal="true" aria-labelledby="catTitle">
+  <h3><span id="catTitle"></span><button class="icon-btn" id="closeCat" aria-label="Cerrar">✕</button></h3>
+  <div id="catBody"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -381,10 +487,10 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
           ['seguros', 'mascotas', 'deporte'].forEach(id => { if (!s.cats.some(c => c.id === id)) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === id)); });
           s.catsV = 2;
         }
-        return { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, rules: s.rules || {} };
+        return { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {} };
       }
     } catch (e) {}
-    return { catsV: 2, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {} };
+    return { catsV: 2, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
   }
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -454,10 +560,14 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
   };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   let toastT;
-  function toast(msg) {
+  function toast(msg, ms = 2200) {
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
   }
+  // Montos cortos para etiquetas chicas: $850k, $1,2M
+  const short = (n) => n >= 1e6 ? `$${(n / 1e6).toFixed(1).replace('.', ',')}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : n > 0 ? `$${Math.round(n)}` : '';
+  const sumOf = (list) => list.reduce((a, i) => a + i.amount, 0);
+  const EMPTY = `<div class="empty"><span class="big">🐷</span>Tu chanchito está esperando.<br>Tocá <b>+</b> y anotá tu primer gasto.</div>`;
 
   // ---------- Mes seleccionado ----------
   let cur = monthKey(todayStr());
@@ -515,17 +625,54 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
       items.forEach(i => m.set(keyFn(i), (m.get(keyFn(i)) || 0) + i.amount));
       return [...m.entries()].sort((a, b) => b[1] - a[1]);
     };
-    const rows = (entries, labelFn) => entries.map(([k, v], idx) => {
+    // Cuánto se gastó en cada categoría el mes anterior (para las flechitas ▲▼)
+    const prevCat = new Map();
+    prev.forEach(i => prevCat.set(i.cat, (prevCat.get(i.cat) || 0) + i.amount));
+    const vsPrev = (k, v) => {
+      const p = prevCat.get(k);
+      if (!p) return prev.length ? ' · <span class="dl">nuevo</span>' : '';
+      const d = (v - p) / p * 100;
+      return Math.abs(d) < 1 ? ' · <span class="dl">=</span>' : ` · <span class="dl ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(0)}%</span>`;
+    };
+    // Filas con barra; las de categoría se pueden tocar para ver el detalle
+    const rows = (entries, labelFn, colorFn) => entries.map(([k, v], idx) => {
       const { emoji, name } = labelFn(k);
       const pct = total ? v / total * 100 : 0;
-      return `<div class="cat-row"><div class="tile" style="--h:${hue(k)}">${emoji}</div><div class="name">${esc(name)}</div>
-        <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}%</span></div>
-        <div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms"></i></div></div>`;
+      const tag = colorFn ? 'button' : 'div';
+      return `<${tag} class="cat-row"${colorFn ? ` data-cat="${esc(k)}"` : ''}><div class="tile" style="--h:${hue(k)}">${emoji}</div><div class="name">${esc(name)}${colorFn ? ' <span class="chev">›</span>' : ''}</div>
+        <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}%${colorFn ? vsPrev(k, v) : ''}</span></div>
+        <div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms${colorFn ? ';background:' + colorFn(k) : ''}"></i></div></${tag}>`;
     }).join('');
-    const emptyMsg = `<div class="empty"><span class="big">🐷</span>Tu chanchito está esperando.<br>Tocá <b>+</b> y anotá tu primer gasto.</div>`;
     const cats = group(i => i.cat);
-    $('byCat').innerHTML = items.length ? rows(cats, catById) : emptyMsg;
+    const colors = sliceColors(cats);
+    lastTotal = total;
+    $('byCat').innerHTML = items.length ? donut(cats, total, colors) + rows(cats, catById, k => colors.get(k) || 'var(--s-rest)') : EMPTY;
     $('byPay').innerHTML = items.length ? rows(group(i => i.pay || 'Sin dato'), k => ({ emoji: payEmoji(k), name: k })) : '<div class="hint">Acá vas a ver si gastás más con tarjeta, efectivo o MP.</div>';
+
+    // ¿Dónde más gastás? Ranking de comercios del mes (agrupa por detalle, sin la parte de cuotas o dólares)
+    const merch = new Map();
+    items.forEach(i => {
+      if (!i.note) return;
+      const name = merchantName(i.note), k = norm(name);
+      const m = merch.get(k) || { name, n: 0, v: 0, cat: i.cat };
+      m.n++; m.v += i.amount; merch.set(k, m);
+    });
+    const topM = [...merch.values()].sort((a, b) => b.v - a.v).slice(0, 5);
+    $('topM').innerHTML = topM.map((m, idx) => `<button class="cat-row" data-q="${esc(m.name)}"><div class="tile" style="--h:${hue(m.cat)}">${catById(m.cat).emoji}</div>
+      <div class="name">${esc(m.name)} <span class="chev">›</span></div>
+      <div class="amt">${money(m.v)} <span class="pct">${m.n} ${m.n === 1 ? 'vez' : 'veces'}</span></div>
+      <div class="bar"><i style="width:${m.v / topM[0].v * 100}%;animation-delay:${idx * 60}ms"></i></div></button>`).join('');
+    $('topCard').hidden = topM.length < 2;
+
+    // Presupuestos
+    const buds = budgetsHtml(items);
+    $('buds').innerHTML = buds || '<p class="hint" style="margin:0">Ponele un tope mensual a una categoría y acá vas a ver cómo venís. Tocá cualquier categoría de arriba para empezar. 🎯</p>';
+    $('budCard').hidden = !buds && !items.length;
+
+    // Evolución de los últimos 6 meses
+    $('evo').innerHTML = evoBars(k => sumOf(state.items.filter(i => monthKey(i.date) === k)), 'data-m');
+    const last6 = [0, 1, 2, 3, 4, 5].map(n => sumOf(state.items.filter(i => monthKey(i.date) === shiftMonth(cur, -n)))).filter(v => v > 0);
+    $('evoHint').textContent = last6.length > 1 ? `Promedio de los meses con datos: ${money(sumOf(last6.map(v => ({ amount: v }))) / last6.length)}. Tocá un mes para verlo.` : 'Con el correr de los meses vas a ver acá si venís subiendo o bajando.';
 
     // Dato destacado: la categoría que más se lleva
     if (cats.length && total) {
@@ -535,15 +682,114 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
       $('insight').hidden = false;
     } else $('insight').hidden = true;
 
-    // Movimientos por día
-    const sorted = items.slice().sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+    renderMovs();
+    renderCat();
+
+    $('lastBackup').textContent = state.lastBackup
+      ? `Último respaldo: ${new Date(state.lastBackup).toLocaleDateString('es-AR')}`
+      : 'Todavía no hiciste ningún respaldo.';
+    renderSettings();
+  }
+
+  // ---------- Torta por categoría ----------
+  // Hasta 6 porciones con color propio; si hay más categorías, las chicas van juntas en "Resto" (gris).
+  // El color se asigna por el orden de la lista de categorías, no por tamaño, para que no "salte" de un mes a otro.
+  const SLOTS = 6;
+  let lastTotal = 0;
+  const catIndex = (id) => { const i = state.cats.findIndex(c => c.id === id); return i < 0 ? 999 : i; };
+  function sliceColors(cats) {
+    const shown = cats.length <= SLOTS ? cats : cats.slice(0, SLOTS - 1);
+    const order = shown.map(([k]) => k).sort((a, b) => catIndex(a) - catIndex(b));
+    return new Map(order.map((k, i) => [k, `var(--s${i + 1})`]));
+  }
+  const donutCenter = (label, v) => `<div><small>${esc(label)}</small><b>${money(v)}</b></div>`;
+  function donut(cats, total, colors) {
+    const slices = cats.filter(([k]) => colors.has(k)).map(([k, v]) => ({ k, v, c: colors.get(k), cat: catById(k) }));
+    const restV = cats.filter(([k]) => !colors.has(k)).reduce((a, [, v]) => a + v, 0);
+    if (restV > 0) slices.push({ k: '', v: restV, c: 'var(--s-rest)', cat: { emoji: '➕', name: `Resto (${cats.length - slices.length} categorías)` } });
+    const gap = slices.length > 1 ? 0.9 : 0;   // separación entre porciones, color de fondo
+    let start = 0;
+    const arcs = slices.map(s => {
+      const len = s.v / total * 100, dash = Math.max(len - gap, 0.05);
+      const el = `<circle r="15.915" cx="21" cy="21" fill="none" stroke="${s.c}" stroke-width="6.5" stroke-dasharray="${dash} ${100 - dash}" stroke-dashoffset="${-start}" data-cat="${s.k}" data-v="${s.v}" data-n="${esc(s.cat.name)}"><title>${esc(s.cat.name)}: ${money(s.v)} (${len.toFixed(1)}%)</title></circle>`;
+      start += len; return el;
+    }).join('');
+    // En la leyenda va el nombre corto: "Súper / almacén" → "Súper", "Resto (4 categorías)" → "Resto"
+    const shortName = (n) => n.split(/ \/ | \(/)[0];
+    const legend = slices.map(s => `<button data-cat="${s.k}"><i style="background:${s.c}"></i><span>${s.cat.emoji} ${esc(shortName(s.cat.name))}</span><span>${(s.v / total * 100).toFixed(0)}%</span></button>`).join('');
+    return `<div class="donut-wrap"><div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Gasto por categoría">${arcs}</svg>
+      <div class="donut-center" id="dc">${donutCenter('Total del mes', total)}</div></div><div class="legend">${legend}</div></div>`;
+  }
+  $('byCat').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b && b.dataset.cat) openCat(b.dataset.cat); });
+  // Pasar el dedo / mouse por una porción muestra su monto en el centro
+  $('byCat').addEventListener('pointerover', e => {
+    const s = e.target.closest('circle, .legend button'); if (!s || !$('dc')) return;
+    const circle = s.tagName === 'circle' ? s : $('byCat').querySelector(`circle[data-cat="${s.dataset.cat}"]`);
+    if (circle) $('dc').innerHTML = donutCenter(circle.dataset.n, +circle.dataset.v);
+  });
+  $('byCat').addEventListener('pointerout', e => {
+    if (e.target.closest('circle, .legend button') && $('dc')) $('dc').innerHTML = donutCenter('Total del mes', lastTotal);
+  });
+
+  // ---------- Ranking de comercios ----------
+  const merchantName = (note) => {
+    const s = note.replace(/\s*\((?:cuota|U\$S)[^)]*\)/gi, '').trim();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  // Tocar un comercio lleva a Movimientos ya filtrado por ese nombre
+  $('topM').addEventListener('click', e => {
+    const b = e.target.closest('[data-q]'); if (!b) return;
+    Object.assign(filt, { q: b.dataset.q, period: 'mes', cat: '', pay: '' });
+    $('fq').value = b.dataset.q;
+    renderMovs();
+    document.querySelector('nav.tabs button[data-v=movs]').click();
+  });
+
+  // ---------- Evolución mensual (barras) ----------
+  function evoBars(valueFn, attr) {
+    const keys = [5, 4, 3, 2, 1, 0].map(n => shiftMonth(cur, -n));
+    const vals = keys.map(valueFn), max = Math.max(...vals, 1);
+    return `<div class="evo">` + keys.map((k, i) => {
+      const [y, m] = k.split('-').map(Number);
+      const ml = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+      const h = vals[i] ? Math.max(vals[i] / max * 100, 3) : 0;
+      return `<button ${attr}="${k}" class="${k === cur ? 'on' : ''}" aria-label="${monthLabel(k)}: ${money(vals[i])}">
+        <span class="v">${short(vals[i])}</span><span class="track"><span class="col" style="height:${h}%;animation-delay:${i * 40}ms"></span></span><span class="m">${ml}</span></button>`;
+    }).join('') + `</div>`;
+  }
+  $('evo').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { cur = b.dataset.m; render(); } });
+
+  // ---------- Presupuestos ----------
+  const spentIn = (catId, month) => sumOf(state.items.filter(i => i.cat === catId && monthKey(i.date) === month));
+  function budStatus(spent, bud) {
+    const p = spent / bud * 100;
+    return p >= 100 ? ['bad', '🚨', `Te pasaste por ${money(spent - bud)}`]
+      : p >= 80 ? ['warn', '⚠️', `Cerca del tope · quedan ${money(bud - spent)}`]
+      : ['ok', '✅', `Vas bien · quedan ${money(bud - spent)}`];
+  }
+  function budgetBlock(id, spent) {
+    const b = state.budgets[id], [cls, ic, txt] = budStatus(spent, b), c = catById(id);
+    return `<div class="bud-top"><span>${c.emoji} ${esc(c.name)}</span><span><b>${money(spent)}</b> de ${money(b)}</span></div>
+      <div class="bud-bar ${cls}"><i style="width:${Math.min(spent / b * 100, 100)}%"></i></div><div class="bud-st ${cls}">${ic} ${txt}</div>`;
+  }
+  function budgetsHtml(items) {
+    return Object.keys(state.budgets).filter(id => state.budgets[id] > 0 && state.cats.some(c => c.id === id))
+      .sort((a, b) => catIndex(a) - catIndex(b))
+      .map(id => `<button class="bud" data-cat="${id}">${budgetBlock(id, sumOf(items.filter(i => i.cat === id)))}</button>`).join('');
+  }
+  $('buds').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) openCat(b.dataset.cat); });
+
+  // ---------- Lista de movimientos agrupada por día ----------
+  function movList(list) {
+    const sorted = list.slice().sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
     let html = '', lastDay = null;
+    const thisYear = todayStr().slice(0, 4);
     sorted.forEach(i => {
       if (i.date !== lastDay) {
         lastDay = i.date;
-        const dayTotal = sorted.filter(x => x.date === i.date).reduce((a, x) => a + x.amount, 0);
+        const dayTotal = sumOf(sorted.filter(x => x.date === i.date));
         const [y, m, d] = i.date.split('-').map(Number);
-        let lbl = new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' });
+        let lbl = new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short', ...(String(y) !== thisYear ? { year: 'numeric' } : {}) });
         lbl = i.date === todayStr() ? 'Hoy' : lbl.charAt(0).toUpperCase() + lbl.slice(1);
         html += `<div class="day"><span>${lbl}</span><span>${money(dayTotal)}</span></div>`;
       }
@@ -552,16 +798,78 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
         <div><div class="t">${esc(i.note || c.name)}</div><div class="s">${esc(i.note ? c.name + ' · ' : '')}${esc(i.pay || '')}</div></div>
         <div class="a">${money(i.amount)}</div></button>`;
     });
-    $('movs').innerHTML = html || emptyMsg;
-
-    $('lastBackup').textContent = state.lastBackup
-      ? `Último respaldo: ${new Date(state.lastBackup).toLocaleDateString('es-AR')}`
-      : 'Todavía no hiciste ningún respaldo.';
-    renderSettings();
+    return html;
   }
 
+  // ---------- Movimientos: buscador y filtros ----------
+  const filt = { q: '', period: 'mes', cat: '', pay: '' };
+  function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n + 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function renderMovs() {
+    const today = todayStr(), q = norm(filt.q.trim());
+    const list = state.items.filter(i =>
+      (filt.period === 'mes' ? monthKey(i.date) === cur : filt.period === 'todo' ? true : i.date >= daysAgo(+filt.period) && i.date <= today) &&
+      (!filt.cat || i.cat === filt.cat) && (!filt.pay || i.pay === filt.pay) &&
+      (!q || norm(`${i.note || ''} ${catById(i.cat).name} ${i.pay || ''}`).includes(q)));
+    const periods = [['mes', cur === monthKey(today) ? 'Este mes' : monthLabel(cur)], ['7', '7 días'], ['30', '30 días'], ['todo', 'Todo']];
+    chips($('fPeriod'), periods.map(([key, label]) => ({ key, label })), filt.period, k => { filt.period = k; renderMovs(); });
+    $('fCat').innerHTML = `<option value="">Todas las categorías</option>` + state.cats.map(c => `<option value="${esc(c.id)}">${c.emoji} ${esc(c.name)}</option>`).join('');
+    $('fCat').value = filt.cat;
+    $('fPay').innerHTML = `<option value="">Todos los medios</option>` + state.pays.map(p => `<option>${esc(p)}</option>`).join('');
+    $('fPay').value = filt.pay;
+    const active = filt.q || filt.cat || filt.pay || filt.period !== 'mes';
+    $('fSum').innerHTML = `<span>${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}</span>${active ? '<button id="fClear">Limpiar filtros</button>' : ''}<b>${money(sumOf(list))}</b>`;
+    $('movs').innerHTML = movList(list) || (state.items.length && active ? '<div class="empty"><span class="big">🔎</span>No encontré movimientos con esos filtros.</div>' : EMPTY);
+  }
+  $('fq').addEventListener('input', () => { filt.q = $('fq').value; renderMovs(); });
+  $('fCat').addEventListener('change', () => { filt.cat = $('fCat').value; renderMovs(); });
+  $('fPay').addEventListener('change', () => { filt.pay = $('fPay').value; renderMovs(); });
+  $('fSum').addEventListener('click', e => {
+    if (e.target.id !== 'fClear') return;
+    Object.assign(filt, { q: '', period: 'mes', cat: '', pay: '' }); $('fq').value = ''; renderMovs();
+  });
   $('movs').addEventListener('click', e => {
     const b = e.target.closest('.mov'); if (b) openSheet(b.dataset.id);
+  });
+
+  // ---------- Detalle de una categoría ----------
+  let openCatId = null;
+  function openCat(id) {
+    openCatId = id; renderCat();
+    $('catSheet').scrollTop = 0;
+    $('catBg').classList.add('open'); $('catSheet').classList.add('open');
+  }
+  function closeCat() { openCatId = null; $('catBg').classList.remove('open'); $('catSheet').classList.remove('open'); }
+  $('closeCat').onclick = closeCat;
+  $('catBg').onclick = closeCat;
+  function renderCat() {
+    if (!openCatId) return;
+    const id = openCatId, c = catById(id);
+    const list = state.items.filter(i => i.cat === id && monthKey(i.date) === cur);
+    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => monthKey(i.date) === cur));
+    const b = state.budgets[id] || 0;
+    $('catTitle').textContent = `${c.emoji} ${c.name}`;
+    $('catBody').innerHTML = `
+      <div class="big-amt">${money(spent)}</div>
+      <div class="hint">${monthLabel(cur)} · ${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}${monthTotal ? ` · ${(spent / monthTotal * 100).toFixed(0)}% del mes` : ''}</div>
+      ${b ? `<div style="margin-top:12px">${budgetBlock(id, spent)}</div>` : ''}
+      <div class="label">Tope mensual (presupuesto)</div>
+      <div class="bud-edit"><input type="text" id="budIn" inputmode="decimal" placeholder="Sin tope · ej: 150.000" value="${b ? new Intl.NumberFormat('es-AR').format(b) : ''}"><button class="btn-small" id="budSave">${b ? 'Cambiar' : 'Poner tope'}</button></div>
+      <div class="label">Últimos 6 meses</div>
+      ${evoBars(k => spentIn(id, k), 'data-cm')}
+      <div class="label">Movimientos</div>
+      ${movList(list) || '<p class="hint">No hay movimientos de esta categoría en el mes.</p>'}`;
+  }
+  $('catBody').addEventListener('click', e => {
+    const m = e.target.closest('[data-cm]');
+    if (m) { cur = m.dataset.cm; render(); return; }
+    const mv = e.target.closest('.mov');
+    if (mv) { openSheet(mv.dataset.id); return; }
+    if (e.target.id === 'budSave') {
+      const v = parseAmount($('budIn').value);
+      if (v > 0) { state.budgets[openCatId] = v; toast(`Tope guardado: ${money(v)} por mes 🎯`); }
+      else { delete state.budgets[openCatId]; toast('Tope quitado'); }
+      persist(); render();
+    }
   });
 
   // ---------- Pestañas ----------
@@ -613,8 +921,15 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
     state.lastPay = selPay;
     persist(); closeSheet();
     cur = monthKey(data.date); render();
-    if (editing) toast('Listo, actualizado ✏️');
-    else { toast(`${money(amount)} · ${pick(CHEERS[data.cat] || ['¡Anotado! ✅', 'Tu yo del futuro te lo agradece 🙌'])}`); burst(catById(data.cat).emoji); }
+    // Aviso de presupuesto: solo cuando este gasto cruza el 80% o el 100% del tope
+    const bud = state.budgets[data.cat];
+    const after = bud ? spentIn(data.cat, monthKey(data.date)) : 0, before = after - (editing ? 0 : amount);
+    const cname = catById(data.cat).name;
+    if (!editing && bud && after >= bud && before < bud) toast(`🚨 ${cname}: te pasaste del tope (${money(after)} de ${money(bud)})`, 4000);
+    else if (!editing && bud && after >= bud * .8 && before < bud * .8) toast(`⚠️ ${cname}: ya usaste el ${Math.round(after / bud * 100)}% del tope`, 4000);
+    else if (editing) toast('Listo, actualizado ✏️');
+    else toast(`${money(amount)} · ${pick(CHEERS[data.cat] || ['¡Anotado! ✅', 'Tu yo del futuro te lo agradece 🙌'])}`);
+    if (!editing) burst(catById(data.cat).emoji);
   };
   $('del').onclick = () => {
     if (!editing || !confirm('¿Eliminar este gasto?')) return;
@@ -696,7 +1011,7 @@ textarea { width: 100%; min-height: 110px; font: 13px/1.3 ui-monospace, Consolas
       const s = JSON.parse(await f.text());
       if (!Array.isArray(s.items)) throw new Error();
       if (!confirm(`El respaldo tiene ${s.items.length} gastos. Esto reemplaza lo que hay ahora (${state.items.length}). ¿Seguir?`)) return;
-      state = { cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items, lastBackup: s.lastBackup || null, lastPay: s.lastPay, rules: s.rules || {} };
+      state = { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items, lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {} };
       persist(); render(); toast('Respaldo restaurado');
     } catch (err) { toast('Ese archivo no es un respaldo válido'); }
   };
