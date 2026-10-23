@@ -73,7 +73,8 @@ header {
 header h1 { font-size: 22px; margin: 0; flex: 1; font-weight: 800; letter-spacing: -.3px; }
 header h1 small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
 .month-nav { display: flex; align-items: center; gap: 4px; }
-.month-nav span { min-width: 110px; text-align: center; font-weight: 600; }
+.month-nav span { min-width: 0; text-align: center; font-weight: 600; font-size: 15px; white-space: nowrap; }
+header h1 { white-space: nowrap; }
 button {
   font: inherit; color: inherit; background: none; border: 0; cursor: pointer;
 }
@@ -109,6 +110,14 @@ main { padding: 0 16px 72px; max-width: 640px; margin: 0 auto; }
 .mini-stats div { background: rgba(255,255,255,.14); border-radius: 14px; padding: 9px 12px; }
 .mini-stats small { display: block; font-size: 12px; opacity: .85; }
 .mini-stats b { font-size: 17px; font-variant-numeric: tabular-nums; }
+/* Presupuesto mensual dentro de la tarjeta principal */
+.inc { margin-top: 12px; background: rgba(255,255,255,.14); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+.inc-top { display: flex; justify-content: space-between; gap: 8px; }
+.inc-top b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.inc-bar { height: 8px; background: rgba(255,255,255,.25); border-radius: 4px; overflow: hidden; margin: 7px 0 6px; }
+.inc-bar i { display: block; height: 100%; background: #fff; border-radius: 4px; transform-origin: left; animation: grow .8s cubic-bezier(.2,.8,.2,1) both; }
+.inc-bar.over i { background: #fecdd3; }
+.inc small { opacity: .9; }
 
 .insight {
   display: flex; gap: 12px; align-items: center; background: var(--accent-soft); color: var(--text);
@@ -323,11 +332,16 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
         <div><small>Promedio por día</small><b id="perDay">—</b></div>
         <div><small>Tu día más gastador</small><b id="topDay">—</b></div>
       </div>
+      <div class="inc" id="inc" hidden></div>
     </div>
     <div class="insight" id="insight" hidden></div>
     <div class="card">
       <h2>¿En qué se fue?</h2>
       <div id="byCat"></div>
+    </div>
+    <div class="card">
+      <h2>Por tarjeta y cuenta</h2>
+      <div id="byPay"></div>
     </div>
     <div class="card" id="topCard" hidden>
       <h2>¿Dónde más gastás?</h2>
@@ -342,15 +356,11 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
       <div id="evo"></div>
       <p class="hint" id="evoHint" style="margin:10px 0 0"></p>
     </div>
-    <div class="card">
-      <h2>¿Cómo pagaste?</h2>
-      <div id="byPay"></div>
-    </div>
   </section>
 
   <!-- MOVIMIENTOS -->
   <section id="view-movs" hidden>
-    <button class="imp-btn" id="openImp">📄 Importar resumen de tarjeta</button>
+    <button class="imp-btn" id="openImp">📄 Importar resumen (tarjeta o Mercado Pago)</button>
     <div class="filters">
       <input type="search" id="fq" placeholder="🔎 Buscar comercio, detalle o categoría…" autocomplete="off">
       <div class="chips" id="fPeriod"></div>
@@ -365,6 +375,11 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
+    <div class="card">
+      <h2>Presupuesto mensual</h2>
+      <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
+      <div class="bud-edit"><input type="text" id="incIn" inputmode="decimal" placeholder="Ej: 3.200.000"><button class="btn-small" id="incSave">Guardar</button></div>
+    </div>
     <div class="card">
       <h2>Respaldo</h2>
       <p class="hint">Tus gastos se guardan solo en este dispositivo. Descargá un respaldo de vez en cuando (por ejemplo, a fin de mes) y guardalo en Drive o mandátelo por mail.</p>
@@ -421,7 +436,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   <h3><span id="impTitle">Importar resumen</span><button class="icon-btn" id="closeImp" aria-label="Cerrar">✕</button></h3>
   <div id="impStep1">
     <div class="row2">
-      <div><div class="label">Tarjeta</div><select id="iPay"></select></div>
+      <div><div class="label">Tarjeta / cuenta</div><select id="iPay"></select></div>
       <div><div class="label">Cierre del resumen</div><input type="date" id="iDate"></div>
     </div>
     <div class="label">Cotización dólar (para consumos en USD)</div>
@@ -487,7 +502,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
           ['seguros', 'mascotas', 'deporte'].forEach(id => { if (!s.cats.some(c => c.id === id)) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === id)); });
           s.catsV = 2;
         }
-        return { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {} };
+        return { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
       }
     } catch (e) {}
     return { catsV: 2, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
@@ -619,6 +634,21 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     const top = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0];
     $('topDay').textContent = top ? `${+top[0].slice(8)}/${+top[0].slice(5, 7)} · ${money(top[1])}` : '—';
 
+    // Presupuesto mensual (sueldo): cuánto usaste, cuánto queda y, en el mes en curso, a cuánto vas a llegar a este ritmo
+    const inc = state.income || 0;
+    $('inc').hidden = !inc;
+    if (inc) {
+      const used = total / inc * 100, left = inc - total;
+      const daysInMonth = new Date(cy, cm, 0).getDate();
+      const proj = isCurrent && dayNow >= 5 && items.length ? total / dayNow * daysInMonth : 0;
+      $('inc').innerHTML = `<div class="inc-top"><span>Presupuesto del mes</span><span><b>${used.toFixed(0)}%</b> de ${money(inc)}</span></div>
+        <div class="inc-bar ${used >= 100 ? 'over' : ''}"><i style="width:${Math.min(used, 100)}%"></i></div>
+        <small>${left >= 0 ? `Te quedan <b>${money(left)}</b>` : `Te pasaste por <b>${money(-left)}</b> 🔥`}${proj ? ` · A este ritmo cerrás en ${money(proj)}${proj > inc ? ' ⚠️' : ' 👌'}` : ''}</small>`;
+      if (used >= 100) vibe = 'Te pasaste del presupuesto del mes 🔥';
+      else if (proj > inc) vibe = 'Ojo: a este ritmo no llegás a fin de mes 😬';
+      $('vibe').textContent = vibe;
+    }
+
     // Por categoría
     const group = (keyFn) => {
       const m = new Map();
@@ -647,7 +677,13 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     const colors = sliceColors(cats);
     lastTotal = total;
     $('byCat').innerHTML = items.length ? donut(cats, total, colors) + rows(cats, catById, k => colors.get(k) || 'var(--s-rest)') : EMPTY;
-    $('byPay').innerHTML = items.length ? rows(group(i => i.pay || 'Sin dato'), k => ({ emoji: payEmoji(k), name: k })) : '<div class="hint">Acá vas a ver si gastás más con tarjeta, efectivo o MP.</div>';
+    // Por tarjeta / cuenta: cada una se toca para ver su desglose
+    $('byPay').innerHTML = items.length ? group(i => i.pay || 'Sin dato').map(([k, v], idx) => {
+      const pct = total ? v / total * 100 : 0, n = items.filter(i => (i.pay || 'Sin dato') === k).length;
+      return `<button class="cat-row" data-pay="${esc(k)}"><div class="tile" style="--h:${hue(k)}">${payEmoji(k)}</div><div class="name">${esc(k)} <span class="chev">›</span></div>
+        <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}% · ${n} mov.</span></div>
+        <div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms"></i></div></button>`;
+    }).join('') : '<div class="hint">Acá vas a ver cuánto se fue por cada tarjeta, Mercado Pago o efectivo.</div>';
 
     // ¿Dónde más gastás? Ranking de comercios del mes (agrupa por detalle, sin la parte de cuotas o dólares)
     const merch = new Map();
@@ -831,17 +867,42 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     const b = e.target.closest('.mov'); if (b) openSheet(b.dataset.id);
   });
 
-  // ---------- Detalle de una categoría ----------
-  let openCatId = null;
-  function openCat(id) {
-    openCatId = id; renderCat();
+  // ---------- Detalle de una categoría o de una tarjeta/cuenta (mismo panel) ----------
+  let openCatId = null, openPayKey = null;
+  const payOf = (i) => i.pay || 'Sin dato';
+  function showDetail() {
+    renderCat();
     $('catSheet').scrollTop = 0;
     $('catBg').classList.add('open'); $('catSheet').classList.add('open');
   }
-  function closeCat() { openCatId = null; $('catBg').classList.remove('open'); $('catSheet').classList.remove('open'); }
+  function openCat(id) { openCatId = id; openPayKey = null; showDetail(); }
+  function openPay(key) { openPayKey = key; openCatId = null; showDetail(); }
+  function closeCat() { openCatId = openPayKey = null; $('catBg').classList.remove('open'); $('catSheet').classList.remove('open'); }
   $('closeCat').onclick = closeCat;
   $('catBg').onclick = closeCat;
+  $('byPay').addEventListener('click', e => { const b = e.target.closest('[data-pay]'); if (b) openPay(b.dataset.pay); });
+  // Detalle de una tarjeta o cuenta: total, en qué categorías se fue, evolución y movimientos
+  function renderPay() {
+    const key = openPayKey;
+    const list = state.items.filter(i => payOf(i) === key && monthKey(i.date) === cur);
+    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => monthKey(i.date) === cur));
+    const m = new Map();
+    list.forEach(i => m.set(i.cat, (m.get(i.cat) || 0) + i.amount));
+    const byC = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    $('catTitle').textContent = `${payEmoji(key)} ${key}`;
+    $('catBody').innerHTML = `
+      <div class="big-amt">${money(spent)}</div>
+      <div class="hint">${monthLabel(cur)} · ${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}${monthTotal ? ` · ${(spent / monthTotal * 100).toFixed(0)}% del mes` : ''}</div>
+      <div class="label">¿En qué se fue?</div>
+      ${byC.map(([k, v], idx) => { const c = catById(k), pct = spent ? v / spent * 100 : 0; return `<button class="cat-row" data-cat="${esc(k)}"><div class="tile" style="--h:${hue(k)}">${c.emoji}</div><div class="name">${esc(c.name)} <span class="chev">›</span></div>
+        <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}%</span></div><div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms"></i></div></button>`; }).join('') || '<p class="hint">Sin gastos este mes.</p>'}
+      <div class="label">Últimos 6 meses</div>
+      ${evoBars(k => sumOf(state.items.filter(i => payOf(i) === key && monthKey(i.date) === k)), 'data-cm')}
+      <div class="label">Movimientos</div>
+      ${movList(list) || '<p class="hint">No hay movimientos en el mes.</p>'}`;
+  }
   function renderCat() {
+    if (openPayKey) return renderPay();
     if (!openCatId) return;
     const id = openCatId, c = catById(id);
     const list = state.items.filter(i => i.cat === id && monthKey(i.date) === cur);
@@ -862,6 +923,8 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   $('catBody').addEventListener('click', e => {
     const m = e.target.closest('[data-cm]');
     if (m) { cur = m.dataset.cm; render(); return; }
+    const cr = e.target.closest('[data-cat]');
+    if (cr) { openCat(cr.dataset.cat); return; }
     const mv = e.target.closest('.mov');
     if (mv) { openSheet(mv.dataset.id); return; }
     if (e.target.id === 'budSave') {
@@ -938,7 +1001,14 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   };
 
   // ---------- Ajustes: categorías y medios de pago ----------
+  $('incSave').onclick = () => {
+    const v = parseAmount($('incIn').value);
+    if (v > 0) { state.income = v; toast(`Presupuesto mensual: ${money(v)} 💰`); }
+    else { delete state.income; toast('Presupuesto mensual quitado'); }
+    persist(); render();
+  };
   function renderSettings() {
+    if (document.activeElement !== $('incIn')) $('incIn').value = state.income ? new Intl.NumberFormat('es-AR').format(state.income) : '';
     $('catList').innerHTML = state.cats.map((c, i) => `<div class="cat-edit">
       <input type="text" class="e" data-i="${i}" data-f="emoji" value="${esc(c.emoji)}" maxlength="4" aria-label="Emoji">
       <input type="text" data-i="${i}" data-f="name" value="${esc(c.name)}" aria-label="Nombre">
@@ -1011,7 +1081,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
       const s = JSON.parse(await f.text());
       if (!Array.isArray(s.items)) throw new Error();
       if (!confirm(`El respaldo tiene ${s.items.length} gastos. Esto reemplaza lo que hay ahora (${state.items.length}). ¿Seguir?`)) return;
-      state = { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items, lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {} };
+      state = { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items, lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
       persist(); render(); toast('Respaldo restaurado');
     } catch (err) { toast('Ese archivo no es un respaldo válido'); }
   };
@@ -1019,14 +1089,14 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   // ---------- Importar resumen de tarjeta ----------
   // Palabras clave → categoría. Las que el usuario corrige se guardan en state.rules y pisan a estas.
   const BASE_RULES = {
-    banco: ['IMPUESTO', 'IMP ', 'IVA', 'SELLOS', 'PERCEP', 'PERCEPCION', 'RETENCION', 'INTERES', 'COMISION', 'CARGO', 'MANTENIMIENTO', 'SEGURO DE VIDA', 'DB.RG', 'DB RG', 'IIBB', 'PAIS'],
-    super: ['CARREFOUR', 'COTO', 'JUMBO', 'DISCO', 'VEA', 'CHANGOMAS', 'DIA ', 'SUPERMERC', 'MAXICONSUMO', 'VITAL', 'ALMACEN', 'AUTOSERVICIO', 'MAKRO', 'LA ANONIMA'],
+    banco: ['IMPUESTO', 'IMP ', 'IVA', 'SELLOS', 'PERCEP', 'PERCEPCION', 'RETENCION', 'INTERES', 'COMISION', 'CARGO', 'MANTENIMIENTO', 'SEGURO DE VIDA', 'DB.RG', 'DB RG', 'IIBB', 'PAIS', 'ARCA', 'AFIP', 'RENTAS'],
+    super: ['CARREFOUR', 'COTO', 'JUMBO', 'DISCO', 'VEA', 'CHANGOMAS', 'DIA ', 'SUPERMERC', 'MAXICONSUMO', 'VITAL', 'ALMACEN', 'AUTOSERVICIO', 'MAKRO', 'LA ANONIMA', 'DIETETICA', 'CARNIC', 'VERDULER', 'FIAMBRER', 'PANADER'],
     comida: ['RAPPI', 'PEDIDOSYA', 'PEDIDOS YA', 'MCDONALD', 'BURGER', 'MOSTAZA', 'RESTAUR', 'PARRILLA', 'PIZZ', 'CAFE', 'STARBUCKS', 'HAVANNA', 'HELAD', 'GRIDO', 'FREDDO'],
     auto: ['YPF', 'APPYPF', 'SHELL', 'AXION', 'PUMA', 'GULF', 'ESTACION DE SERV', 'PEAJE', 'AUTOPISTA', 'TELEPEAJE', 'ESTACIONAM', 'LUBRIC', 'NEUMATIC'],
     transp: ['UBER', 'UBR', 'CABIFY', 'DIDI', 'SUBE', 'TAXI', 'AEROLINEAS', 'FLYBONDI', 'JETSMART', 'DESPEGAR'],
     seguros: ['SEGURO', 'LA SEGUNDA', 'SEG ACC', 'SEG VIDA', 'LIFE SEG', 'SANCOR', 'ZURICH', 'MAPFRE', 'ALLIANZ', 'FEDERACION PATRONAL', 'RIVADAVIA SEG', 'LA CAJA'],
     servicios: ['EDENOR', 'EDESUR', 'EPE', 'EPEC', 'NATURGY', 'METROGAS', 'CAMUZZI', 'LITORAL GAS', 'AYSA', 'AGUAS', 'PERSONAL', 'TELECOM', 'MOVISTAR', 'CLARO', 'FIBERTEL', 'TELECENTRO', 'DIRECTV', 'FLOW'],
-    salud: ['FARMACIA', 'FARMACITY', 'OSDE', 'SWISS MEDICAL', 'GALENO', 'MEDIFE', 'OMINT', 'ODONTO', 'OPTICA', 'CLINICA', 'SANATORIO'],
+    salud: ['FARMA', 'FCIA', 'FARMACIA', 'FARMACITY', 'OSDE', 'SWISS MEDICAL', 'GALENO', 'MEDIFE', 'OMINT', 'ODONTO', 'OPTICA', 'CLINICA', 'SANATORIO'],
     mascotas: ['PETS', 'PETSHOP', 'VETERIN', 'MASCOT', 'PUPPIS'],
     deporte: ['~FITN', '~GYM', 'GIMNASIO', 'SPORTCLUB', 'MEGATLON', 'PADEL'],
     ropa: ['ZARA', 'NIKE', 'ADIDAS', 'DEXTER', 'GRIMOLDI', 'FALABELLA', 'H&M', 'TOPPER'],
@@ -1133,6 +1203,54 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     return out;
   }
 
+  // ---------- Resumen de cuenta de Mercado Pago ----------
+  // Cada movimiento: "DD-MM-AAAA [descripción] ID $ valor $ saldo". Si la descripción es larga,
+  // el PDF la parte: un pedazo en el renglón de arriba y otro en el de abajo.
+  const isMP = (text) => /RESUMEN DE CUENTA EN PESOS/i.test(text) && /MERCADO ?PAGO|MERCADO LIBRE/i.test(text);
+  const MP_LINE = /^(\d{2})-(\d{2})-(\d{4})\s*(.*?)\s*(\d{9,})\s+\$\s?(-?[\d.]+,\d{2})\s+\$\s?-?[\d.]+,\d{2}$/;
+  const MP_NOISE = /^(ID de la|Fecha Descripci|operaci[oó]n$|--- p|\d+\/\d+$|Fecha de generaci|Mercado Libre S\.R\.L|de consulta|DETALLE DE MOV)/i;
+  function parseMP(text) {
+    let lines = text.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const end = lines.findIndex(l => /TENENCIAS EN D[OÓ]LARES/i.test(l));   // la parte en dólares no son gastos
+    if (end > 0) lines = lines.slice(0, end);
+    const piece = (l) => l && !MP_NOISE.test(l) && !MP_LINE.test(l) ? l : '';
+    const out = [];
+    lines.forEach((l, idx) => {
+      const m = l.match(MP_LINE); if (!m) return;
+      const value = parseAmount(m[6]);
+      if (!(value < 0)) return;   // solo salidas: lo que entra viene de tu cuenta bancaria
+      let raw = m[4];
+      if (!raw) {
+        const before = piece(lines[idx - 1]), after = piece(lines[idx + 1]);
+        raw = /^Transferencia enviada$/i.test(after) ? `${after} ${before}` : `${before} ${after}`;
+      }
+      raw = raw.replace(/\s+/g, ' ').trim();
+      let name = raw.replace(/^(Transferencia enviada|Pago con QR|Pago de servicio|Pago en|Compra en)\s*/i, '') || raw;
+      if (name === name.toUpperCase()) name = name.toLowerCase();
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+      const n = norm(raw);
+      // Salidas que no son gasto: se muestran destildadas con el motivo
+      // Pago de tarjeta: si el resumen de esa tarjeta ya se importa, sumarlo duplicaría sus consumos.
+      // Si es una tarjeta que no se importa (ej. la de Mercado Pago), se tilda a mano.
+      const why = /PAGO AUTOMATICO TARJETA|PAGO DE TARJETA/.test(n) ? 'Pago de tarjeta: tildalo solo si NO importás el resumen de esa tarjeta'
+        : /^DINERO RESERVADO/.test(n) ? 'Pasó a una reserva (ahorro)'
+        : /BALESTRA/.test(n) && /JUAN/.test(n) ? 'Transferencia a tu propia cuenta'
+        : /BALANZ|CAPITAL VALORES|INVERSION|\bIOL\b|COCOS CAPITAL|\bPPI\b/.test(n) ? 'Inversión'
+        : '';
+      out.push({ date: `${m[3]}-${m[2]}-${m[1]}`, desc: name, amount: -value, why });
+    });
+    return out;
+  }
+  function mpMeta(text) {
+    const meta = { brand: 'Mercado Pago', rgBase: 0 };
+    const p = text.match(/Periodo:\s*Del \d+ al (\d+) de ([a-záéíóú]+) de (\d{4})/i);
+    const mo = p && MONTHS[norm(p[2]).slice(0, 3).toLowerCase()];
+    if (mo) meta.closing = `${p[3]}-${pad(mo)}-${pad(+p[1])}`;
+    const s = text.match(/Salidas:\s*\$\s?-?([\d.]+,\d{2})/i);
+    if (s) meta.salidas = parseAmount(s[1]);
+    return meta;
+  }
+
   // Datos de cabecera: cierre, marca, total a pagar y base de la percepción RG 5617 (sirve para sacar el dólar)
   function detectMeta(text) {
     const meta = {};
@@ -1183,16 +1301,17 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   $('iDate').addEventListener('change', () => { $('iDate').dataset.touched = '1'; });
   let impMeta = {};
   function analyze(text) {
-    const meta = detectMeta(text);
+    const mp = isMP(text);
+    const meta = mp ? mpMeta(text) : detectMeta(text);
     const found = [];
     if (meta.closing && !$('iDate').dataset.touched) { $('iDate').value = meta.closing; found.push(`cierre ${meta.closing.split('-').reverse().join('/')}`); }
     if (meta.brand) {
       let p = state.pays.find(x => norm(x).includes(norm(meta.brand)));
       if (!p) { state.pays.push(p = meta.brand); persist(); renderSettings(); $('iPay').innerHTML = state.pays.map(x => `<option>${esc(x)}</option>`).join(''); }
-      $('iPay').value = p; found.push(`tarjeta ${p}`);
+      $('iPay').value = p; found.push(`${mp ? 'cuenta' : 'tarjeta'} ${p}`);
     }
     const pay = $('iPay').value, stmt = $('iDate').value || todayStr();
-    const rows = parseStatement(text, stmt);
+    const rows = mp ? parseMP(text) : parseStatement(text, stmt);
     if (!rows.length) { toast('No encontré consumos. Probá pegando el texto.'); return; }
     // Dólar: el que escribiste, o el que surge de la percepción RG 5617 (base en pesos / consumos en USD)
     const usdSum = rows.filter(r => r.isUsd && !r.negative).reduce((a, r) => a + r.amount, 0);
@@ -1201,7 +1320,13 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     rows.forEach(r => { if (r.isUsd) { r.usd = r.amount; r.amount = rate > 0 ? r.amount * rate : NaN; } });
     // Control: lo encontrado en pesos tiene que sumar el total a pagar
     let check = '';
-    if (meta.totalPesos) {
+    if (mp && meta.salidas) {
+      const sum = sumOf(rows), out = rows.filter(r => r.why);
+      check = (Math.abs(sum - meta.salidas) < 1
+        ? `✅ Cuadra con las salidas del resumen: ${money(meta.salidas)}.`
+        : `⚠️ Sumé ${money(sum)} y el resumen dice ${money(meta.salidas)} de salidas. Puede faltar algún movimiento.`) +
+        (out.length ? ` Dejé sin tildar ${out.length} (${money(sumOf(out))}) que no son gastos o ya entran por otro lado: pagos de tarjeta, reservas, transferencias a vos mismo o inversiones.` : '');
+    } else if (meta.totalPesos) {
       const sum = rows.filter(r => !r.isUsd).reduce((a, r) => a + (r.negative ? -r.amount : r.amount), 0);
       check = Math.abs(sum - meta.totalPesos) < 1
         ? `✅ Cuadra con el total del resumen: ${money(meta.totalPesos)}${meta.totalUsd ? ` + U$S ${String(meta.totalUsd).replace('.', ',')}` : ''}`
@@ -1210,7 +1335,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     impMeta = { found, check };
     impRows = rows.map(r => {
       const dup = state.items.some(i => i.pay === pay && i.date === r.date && Math.abs(i.amount - r.amount) < 1);
-      const why = r.negative ? 'Devolución / crédito' : (r.isUsd && !(r.amount > 0)) ? 'USD sin cotización' : dup ? 'Ya cargado' : '';
+      const why = r.why || (r.negative ? 'Devolución / crédito' : (r.isUsd && !(r.amount > 0)) ? 'USD sin cotización' : dup ? 'Ya cargado' : '');
       return { ...r, pay, cat: guessCat(r.desc), on: !why, why };
     });
     drawImp();
