@@ -1,5 +1,5 @@
 // Guarda la app completa (incluido el lector de PDF y la tipografía) para que funcione sin internet.
-const CACHE = 'misgastos-v14';
+const CACHE = 'misgastos-v15';
 const APP = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png',
   'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'vendor/outfit-latin.woff2', 'vendor/outfit-latin-ext.woff2'];
 

@@ -419,6 +419,9 @@ nav.tabs {
 .pad button:active { background: rgba(255,255,255,.38); }
 .pad .ghost-k { background: transparent; font-size: 24px; }
 .lock-links { margin-top: 22px; display: flex; justify-content: center; gap: 22px; }
+.bio-btn { margin-top: 22px; padding: 12px 22px; border-radius: 999px; background: rgba(255,255,255,.95); color: #6d28d9; font-weight: 700; font-size: 16px; box-shadow: 0 8px 22px rgba(0,0,0,.18); }
+/* Al salir de la app se difumina el contenido (así no se ve en el selector de apps) */
+body.cover main, body.cover header, body.cover nav.tabs, body.cover .fab { filter: blur(22px); }
 .lock-links button { color: #fff; opacity: .9; font-size: 14px; text-decoration: underline; }
 
 /* Selección múltiple */
@@ -511,7 +514,7 @@ body.selecting main { padding-bottom: 210px; }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 14 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 15 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -522,11 +525,14 @@ body.selecting main { padding-bottom: 210px; }
       <div id="imps"></div>
     </div>
     <div class="card">
-      <h2><span class="h-ic">🔒</span><span>Bloqueo con PIN<small id="pinState"></small></span></h2>
-      <p class="hint">Pide un PIN de 4 números al abrir la app y al volver a ella después de 1 minuto. Evita que otra persona la abra en tu celular.</p>
+      <h2><span class="h-ic">🔒</span><span>Bloqueo<small id="pinState"></small></span></h2>
+      <p class="hint">Pide Face ID o un PIN de 4 números al abrir la app y al volver a ella después de 20 segundos. Evita que otra persona la abra en tu celular.</p>
       <button class="btn-line" id="pinOn">🔒 Activar PIN</button>
+      <button class="btn-line" id="bioOn" hidden>🙂 Activar Face ID / huella</button>
+      <button class="btn-line" id="bioOff" hidden>🙂 Desactivar Face ID / huella</button>
       <button class="btn-line" id="pinChange">🔁 Cambiar PIN</button>
       <button class="btn-line" id="pinOff">🔓 Quitar PIN</button>
+      <p class="hint" id="bioHint" hidden style="margin-top:4px"></p>
     </div>
     <div class="card">
       <h2><span class="h-ic">💾</span><span>Respaldo</span></h2>
@@ -633,6 +639,7 @@ body.selecting main { padding-bottom: 210px; }
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
       <span></span><button data-k="0">0</button><button data-k="del" class="ghost-k" aria-label="Borrar">⌫</button>
     </div>
+    <button class="bio-btn" id="lockBio" hidden>🙂 Usar Face ID</button>
     <div class="lock-links"><button id="lockCancel">Cancelar</button><button id="lockForgot">Olvidé mi PIN</button></div>
   </div>
 </div>
@@ -715,7 +722,7 @@ body.selecting main { padding-bottom: 210px; }
           });
           s.mesV = 1;
         }
-        return { catsV: 4, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income, myName: s.myName, pin: s.pin };
+        return { catsV: 4, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income, myName: s.myName, pin: s.pin, bio: s.bio };
       }
     } catch (e) {}
     return { catsV: 4, mesV: 1, cats: DEFAULT_CATS.map(c => ({ ...c })), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
@@ -1342,7 +1349,13 @@ body.selecting main { padding-bottom: 210px; }
     renderImports();
     if (document.activeElement !== $('incIn')) $('incIn').value = state.income ? new Intl.NumberFormat('es-AR').format(state.income) : '';
     $('pinOn').hidden = !!state.pin; $('pinChange').hidden = $('pinOff').hidden = !state.pin;
-    $('pinState').textContent = state.pin ? 'Activado ✅' : 'Desactivado';
+    $('pinState').textContent = !state.pin ? 'Desactivado' : state.bio ? 'Face ID + PIN ✅' : 'PIN activado ✅';
+    $('bioOff').hidden = !state.bio;
+    $('bioOn').hidden = true; $('bioHint').hidden = true;
+    if (state.pin && !state.bio) bioAvailable().then(ok => {
+      $('bioOn').hidden = !ok;
+      $('bioHint').hidden = ok; $('bioHint').textContent = 'Face ID no está disponible en este dispositivo o navegador.';
+    });
     $('catList').innerHTML = state.cats.map((c, i) => `<div class="cat-edit">
       <input type="text" class="e" data-i="${i}" data-f="emoji" value="${esc(c.emoji)}" maxlength="4" aria-label="Emoji">
       <input type="text" data-i="${i}" data-f="name" value="${esc(c.name)}" aria-label="Nombre">
@@ -1426,6 +1439,7 @@ body.selecting main { padding-bottom: 210px; }
       // Se guarda tal cual y se recarga: así load() aplica las actualizaciones de formato a respaldos viejos.
       // El PIN que queda es el de este celular, no el del respaldo.
       if (state.pin) s.pin = state.pin; else delete s.pin;
+      if (state.bio) s.bio = state.bio; else delete s.bio;   // Face ID queda atado a este celular
       localStorage.setItem(KEY, JSON.stringify(s));
       location.reload();
     } catch (err) { toast('Ese archivo no es un respaldo válido'); }
@@ -1844,7 +1858,10 @@ body.selecting main { padding-bottom: 210px; }
     pinMode = mode; pinNext = next || null; pinBuf = '';
     $('lockTitle').textContent = title; $('lockMsg').textContent = msg;
     $('lockForgot').hidden = mode !== 'unlock'; $('lockCancel').hidden = mode === 'unlock';
+    $('lockBio').hidden = !(mode === 'unlock' && state.bio);
     $('lock').hidden = false; drawDots(!!msg);
+    // Al abrir, se intenta Face ID directo (si iOS lo frena por no haber un toque, queda el botón)
+    if (mode === 'unlock' && state.bio && !msg) setTimeout(() => bioUnlock(true), 250);
   }
   function hideLock() { $('lock').hidden = true; pinMode = null; pinBuf = ''; }
   async function pinEntered() {
@@ -1889,12 +1906,85 @@ body.selecting main { padding-bottom: 210px; }
   };
   $('pinOn').onclick = () => showLock('set1', 'Elegí un PIN de 4 números');
   $('pinChange').onclick = () => showLock('verify', 'Ingresá tu PIN actual', () => showLock('set1', 'Elegí el PIN nuevo'));
-  $('pinOff').onclick = () => showLock('verify', 'Ingresá tu PIN actual', () => { delete state.pin; persist(); renderSettings(); toast('🔓 PIN quitado'); });
-  // Se vuelve a pedir si la app estuvo en segundo plano más de 1 minuto
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) hiddenAt = Date.now();
-    else if (state.pin && hiddenAt && Date.now() - hiddenAt > 60000 && $('lock').hidden) showLock('unlock', 'Ingresá tu PIN');
+  $('pinOff').onclick = () => showLock('verify', 'Ingresá tu PIN actual', () => { delete state.pin; delete state.bio; persist(); renderSettings(); toast('🔓 Bloqueo quitado'); });
+
+  // ---------- Face ID / huella (WebAuthn, llave de acceso del dispositivo) ----------
+  // La cara nunca llega a la app: el iPhone la verifica y firma un desafío con una llave que no sale del teléfono.
+  // Acá se controla esa firma con la llave pública guardada al activarlo. El PIN queda siempre como respaldo.
+  const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const fromB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+  const sha256 = async (bytes) => new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  async function bioAvailable() {
+    try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }
+    catch (e) { return false; }
+  }
+  // Las firmas ECDSA de WebAuthn vienen en formato DER; WebCrypto las espera como r||s de 32 bytes cada uno
+  function derToRaw(der) {
+    let p = 2; if (der[1] & 0x80) p += der[1] & 0x7f;
+    const part = () => { const len = der[p + 1]; let v = der.slice(p + 2, p + 2 + len); p += 2 + len; while (v.length > 32 && v[0] === 0) v = v.slice(1); const out = new Uint8Array(32); out.set(v, 32 - v.length); return out; };
+    const r = part(), s = part(), raw = new Uint8Array(64); raw.set(r); raw.set(s, 32); return raw;
+  }
+  async function bioRegister() {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: 'Mis Gastos', id: location.hostname },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'Mis Gastos', displayName: 'Mis Gastos' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+      timeout: 60000, attestation: 'none' } });
+    const r = cred.response;
+    const pub = r.getPublicKey ? r.getPublicKey() : null;
+    state.bio = { id: b64u(cred.rawId), pub: pub ? b64u(pub) : null, alg: r.getPublicKeyAlgorithm ? r.getPublicKeyAlgorithm() : -7 };
+    persist();
+  }
+  // Pide Face ID y controla: que sea esta app, que el usuario se haya verificado y que la firma sea válida
+  async function bioCheck() {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const a = await navigator.credentials.get({ publicKey: {
+      challenge, rpId: location.hostname, userVerification: 'required', timeout: 60000,
+      allowCredentials: [{ type: 'public-key', id: fromB64u(state.bio.id) }] } });
+    const r = a.response, auth = new Uint8Array(r.authenticatorData), cdj = new Uint8Array(r.clientDataJSON);
+    const cd = JSON.parse(new TextDecoder().decode(cdj));
+    if (cd.type !== 'webauthn.get' || cd.challenge !== b64u(challenge) || cd.origin !== location.origin) return false;
+    const rpHash = await sha256(new TextEncoder().encode(location.hostname));
+    if (!rpHash.every((b, i) => b === auth[i]) || !(auth[32] & 0x04)) return false;   // 0x04 = usuario verificado (Face ID)
+    if (!state.bio.pub) return true;
+    const signed = new Uint8Array(auth.length + 32); signed.set(auth); signed.set(await sha256(cdj), auth.length);
+    const sig = new Uint8Array(r.signature), pub = fromB64u(state.bio.pub);
+    if (state.bio.alg === -257) {
+      const key = await crypto.subtle.importKey('spki', pub, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+      return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, signed);
+    }
+    const key = await crypto.subtle.importKey('spki', pub, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    return crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, derToRaw(sig), signed);
+  }
+  let bioBusy = false;
+  async function bioUnlock(auto) {
+    if (bioBusy || !state.bio || $('lock').hidden || pinMode !== 'unlock') return;
+    bioBusy = true;
+    try {
+      if (await bioCheck()) { setTries({ fails: 0, until: 0 }); hideLock(); }
+      else $('lockMsg').textContent = 'No se pudo verificar. Probá de nuevo o usá tu PIN';
+    } catch (e) {
+      // Cancelado o frenado por iOS (sin toque): queda el botón y el PIN, sin mensaje si fue automático
+      if (!auto) $('lockMsg').textContent = 'Face ID cancelado. Tocá el botón o usá tu PIN';
+    } finally { bioBusy = false; }
+  }
+  $('lockBio').onclick = () => bioUnlock(false);
+  $('bioOn').onclick = () => showLock('verify', 'Ingresá tu PIN para activar Face ID', async () => {
+    try { await bioRegister(); renderSettings(); toast('🙂 Face ID activado'); }
+    catch (e) { toast('No se pudo activar Face ID en este dispositivo'); }
   });
+  $('bioOff').onclick = () => { delete state.bio; persist(); renderSettings(); toast('Face ID desactivado (queda el PIN)'); };
+
+  // Al salir: se difumina enseguida. Si estuvo afuera más de 20 segundos, al volver pide Face ID o PIN.
+  const LOCK_AFTER = 20000;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); if (state.pin) document.body.classList.add('cover'); return; }
+    document.body.classList.remove('cover');
+    if (state.pin && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER && $('lock').hidden) showLock('unlock', 'Ingresá tu PIN');
+  });
+  window.addEventListener('pagehide', () => { if (state.pin) document.body.classList.add('cover'); });
 
   // ---------- Offline ----------
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
