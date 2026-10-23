@@ -307,6 +307,80 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
 .filter-sum { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 2px 4px; flex-wrap: wrap; }
 .filter-sum b { color: var(--text); margin-left: auto; font-size: 16px; font-variant-numeric: tabular-nums; }
 .filter-sum button { color: var(--accent); font-weight: 600; font-size: 13px; }
+
+/* ================= Pulido visual ================= */
+:root {
+  --card-border: rgba(109, 40, 217, .08);
+  --shadow: 0 1px 2px rgba(27, 21, 48, .04), 0 10px 28px -8px rgba(76, 29, 149, .16);
+  --glow: radial-gradient(900px 420px at 50% -180px, #e6dcff 0%, rgba(230, 220, 255, 0) 70%);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-border: rgba(255, 255, 255, .06);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -10px rgba(0, 0, 0, .6);
+    --glow: radial-gradient(900px 420px at 50% -180px, #2c1d55 0%, rgba(44, 29, 85, 0) 70%);
+  }
+}
+body { background: var(--glow) no-repeat, var(--bg); letter-spacing: -.1px; }
+
+/* Encabezado tipo vidrio */
+header {
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.5) blur(16px); backdrop-filter: saturate(1.5) blur(16px);
+}
+header h1 { font-size: 24px; letter-spacing: -.6px; }
+.month-nav {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 999px; padding: 3px; gap: 2px;
+  box-shadow: 0 1px 2px rgba(27, 21, 48, .05);
+}
+.month-nav .icon-btn { width: 30px; height: 30px; border-radius: 50%; font-size: 18px; color: var(--accent); font-weight: 700; }
+.month-nav span { padding: 0 4px; }
+
+/* Tarjetas */
+.card { border: 1px solid var(--card-border); border-radius: 24px; padding: 18px 18px 16px; }
+.hero { border: 0; box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 18px 40px -12px rgba(192, 38, 211, .45); }
+.card > h2 { display: flex; align-items: center; gap: 10px; font-size: 16px; letter-spacing: -.3px; margin-bottom: 14px; }
+.card > h2 small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-top: 1px; }
+.h-ic {
+  width: 34px; height: 34px; flex: none; border-radius: 11px; display: grid; place-items: center; font-size: 17px;
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--card-border);
+}
+.insight { border: 1px solid var(--card-border); box-shadow: var(--shadow); background: var(--card); }
+.insight .big { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--accent-soft); font-size: 24px; }
+.tile { box-shadow: inset 0 0 0 1px rgba(27, 21, 48, .05); border-radius: 13px; }
+.bar, .bud-bar { height: 6px; }
+.cat-row { padding: 8px 4px; margin: 0 -4px; }
+.cat-row .name { font-weight: 600; letter-spacing: -.2px; }
+.label { text-transform: uppercase; letter-spacing: .07em; font-size: 11px; font-weight: 700; margin: 18px 0 8px; }
+
+/* Movimientos agrupados por día, en una sola tarjeta */
+.day-group { background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; animation: pop .3s ease both; }
+.day-group .day { margin: 0; padding: 12px 16px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.day-group .mov { box-shadow: none; border-radius: 0; margin: 0; background: transparent; border-top: 1px solid var(--line); padding: 11px 16px 11px 12px; }
+.day-group .mov:active { background: var(--bg); transform: none; }
+#catBody .day-group { box-shadow: none; }
+#catBody .day-group .mov { border: 0; border-top: 1px solid var(--line); }
+
+/* Buscador y botones */
+input[type=search] { border: 1px solid var(--card-border); border-radius: 16px; padding: 13px 16px; }
+.imp-btn { border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); background: var(--card); border-radius: 16px; padding: 13px; }
+.btn-line { border: 1px solid var(--card-border); border-radius: 14px; padding: 13px 14px; font-weight: 500; }
+.chip { border-color: var(--card-border); background: var(--card); }
+select, input[type=text], input[type=date] { border-radius: 12px; }
+
+/* Menú inferior tipo vidrio */
+nav.tabs {
+  background: var(--card);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
+  border: 1px solid var(--card-border); border-radius: 24px; box-shadow: 0 12px 34px -10px rgba(27, 21, 48, .28);
+}
+.fab { border-radius: 20px; box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 14px 28px -8px rgba(192, 38, 211, .6); }
+
+/* Paneles deslizables */
+.sheet { border: 1px solid var(--card-border); border-bottom: 0; }
+.sheet h3 { position: sticky; top: -10px; background: var(--card); padding: 6px 0 8px; z-index: 1; letter-spacing: -.4px; }
 </style>
 </head>
 <body>
@@ -336,23 +410,23 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
     </div>
     <div class="insight" id="insight" hidden></div>
     <div class="card">
-      <h2>¿En qué se fue?</h2>
+      <h2><span class="h-ic">🍩</span><span>¿En qué se fue?<small>Tocá una categoría para ver el detalle</small></span></h2>
       <div id="byCat"></div>
     </div>
     <div class="card">
-      <h2>Por tarjeta y cuenta</h2>
+      <h2><span class="h-ic">💳</span><span>Por tarjeta y cuenta<small>Cuánto se fue por cada una · tocala para desglosar</small></span></h2>
       <div id="byPay"></div>
     </div>
     <div class="card" id="topCard" hidden>
-      <h2>¿Dónde más gastás?</h2>
+      <h2><span class="h-ic">🏪</span><span>¿Dónde más gastás?<small>Los comercios y personas que más se llevaron</small></span></h2>
       <div id="topM"></div>
     </div>
     <div class="card" id="budCard">
-      <h2>Presupuestos del mes</h2>
+      <h2><span class="h-ic">🎯</span><span>Presupuestos del mes<small>Topes por categoría</small></span></h2>
       <div id="buds"></div>
     </div>
     <div class="card">
-      <h2>Últimos 6 meses</h2>
+      <h2><span class="h-ic">📈</span><span>Últimos 6 meses<small>Cómo viene el gasto mes a mes</small></span></h2>
       <div id="evo"></div>
       <p class="hint" id="evoHint" style="margin:10px 0 0"></p>
     </div>
@@ -360,7 +434,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
 
   <!-- MOVIMIENTOS -->
   <section id="view-movs" hidden>
-    <button class="imp-btn" id="openImp">📄 Importar resumen (tarjeta o Mercado Pago)</button>
+    <button class="imp-btn" id="openImp">📄 Importar resumen · tarjeta o MP</button>
     <div class="filters">
       <input type="search" id="fq" placeholder="🔎 Buscar comercio, detalle o categoría…" autocomplete="off">
       <div class="chips" id="fPeriod"></div>
@@ -376,12 +450,12 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
     <div class="card">
-      <h2>Presupuesto mensual</h2>
+      <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
       <div class="bud-edit"><input type="text" id="incIn" inputmode="decimal" placeholder="Ej: 3.200.000"><button class="btn-small" id="incSave">Guardar</button></div>
     </div>
     <div class="card">
-      <h2>Respaldo</h2>
+      <h2><span class="h-ic">💾</span><span>Respaldo</span></h2>
       <p class="hint">Tus gastos se guardan solo en este dispositivo. Descargá un respaldo de vez en cuando (por ejemplo, a fin de mes) y guardalo en Drive o mandátelo por mail.</p>
       <button class="btn-line" id="expCsv">📊 Descargar Excel (CSV)</button>
       <button class="btn-line" id="expJson">💾 Descargar respaldo completo</button>
@@ -390,12 +464,12 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
       <p class="hint" id="lastBackup"></p>
     </div>
     <div class="card">
-      <h2>Categorías</h2>
+      <h2><span class="h-ic">🏷️</span><span>Categorías</span></h2>
       <div id="catList"></div>
       <button class="btn-line" id="addCat">➕ Agregar categoría</button>
     </div>
     <div class="card">
-      <h2>Medios de pago</h2>
+      <h2><span class="h-ic">💳</span><span>Medios de pago</span></h2>
       <div id="payList"></div>
       <button class="btn-line" id="addPay">➕ Agregar medio de pago</button>
     </div>
@@ -818,23 +892,26 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
   // ---------- Lista de movimientos agrupada por día ----------
   function movList(list) {
     const sorted = list.slice().sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
-    let html = '', lastDay = null;
-    const thisYear = todayStr().slice(0, 4);
+    const days = [];
     sorted.forEach(i => {
-      if (i.date !== lastDay) {
-        lastDay = i.date;
-        const dayTotal = sumOf(sorted.filter(x => x.date === i.date));
-        const [y, m, d] = i.date.split('-').map(Number);
-        let lbl = new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short', ...(String(y) !== thisYear ? { year: 'numeric' } : {}) });
-        lbl = i.date === todayStr() ? 'Hoy' : lbl.charAt(0).toUpperCase() + lbl.slice(1);
-        html += `<div class="day"><span>${lbl}</span><span>${money(dayTotal)}</span></div>`;
-      }
-      const c = catById(i.cat);
-      html += `<button class="mov" data-id="${i.id}"><div class="tile" style="--h:${hue(i.cat)}">${c.emoji}</div>
-        <div><div class="t">${esc(i.note || c.name)}</div><div class="s">${esc(i.note ? c.name + ' · ' : '')}${esc(i.pay || '')}</div></div>
-        <div class="a">${money(i.amount)}</div></button>`;
+      let g = days[days.length - 1];
+      if (!g || g.date !== i.date) days.push(g = { date: i.date, items: [] });
+      g.items.push(i);
     });
-    return html;
+    const thisYear = todayStr().slice(0, 4);
+    // Cada día es una tarjeta con su total y sus movimientos separados por líneas finas
+    return days.map(g => {
+      const [y, m, d] = g.date.split('-').map(Number);
+      let lbl = new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short', ...(String(y) !== thisYear ? { year: 'numeric' } : {}) });
+      lbl = g.date === todayStr() ? 'Hoy' : lbl.charAt(0).toUpperCase() + lbl.slice(1);
+      return `<div class="day-group"><div class="day"><span>${lbl}</span><span>${money(sumOf(g.items))}</span></div>` +
+        g.items.map(i => {
+          const c = catById(i.cat);
+          return `<button class="mov" data-id="${i.id}"><div class="tile" style="--h:${hue(i.cat)}">${c.emoji}</div>
+            <div><div class="t">${esc(i.note || c.name)}</div><div class="s">${esc(i.note ? c.name + ' · ' : '')}${esc(i.pay || '')}</div></div>
+            <div class="a">${money(i.amount)}</div></button>`;
+        }).join('') + `</div>`;
+    }).join('');
   }
 
   // ---------- Movimientos: buscador y filtros ----------
