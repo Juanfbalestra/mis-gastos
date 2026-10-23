@@ -458,7 +458,7 @@ nav.tabs {
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 9 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 10 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -581,6 +581,7 @@ nav.tabs {
 
   // ---------- Estado y persistencia ----------
   let state = load();
+  persist();   // deja guardado lo que haya ajustado load() (por ejemplo, el mes de los resúmenes viejos)
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -591,10 +592,27 @@ nav.tabs {
           ['seguros', 'mascotas', 'deporte'].forEach(id => { if (!s.cats.some(c => c.id === id)) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === id)); });
           s.catsV = 2;
         }
-        return { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
+        // Una sola vez: los resúmenes importados antes de existir "mes" pasan al mes que les corresponde.
+        // Se toma la última fecha de cada resumen (≈ cierre): si es hasta el día 15, cuenta en el mes anterior.
+        if (!s.mesV && Array.isArray(s.items)) {
+          const batches = {};
+          s.items.filter(i => i.src === 'resumen' && !i.mes).forEach(i => {
+            const k = i.imp || `${i.pay}|${Math.floor(i.created / 10000)}`;
+            (batches[k] = batches[k] || []).push(i);
+          });
+          Object.values(batches).forEach(list => {
+            const last = list.map(i => i.date).sort().pop();
+            let y = +last.slice(0, 4), m = +last.slice(5, 7);
+            if (+last.slice(8, 10) <= 15) { m--; if (m < 1) { m = 12; y--; } }
+            const mes = `${y}-${String(m).padStart(2, '0')}`;
+            list.forEach(i => { i.mes = mes; });
+          });
+          s.mesV = 1;
+        }
+        return { catsV: 2, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
       }
     } catch (e) {}
-    return { catsV: 2, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
+    return { catsV: 2, mesV: 1, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
   }
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
