@@ -434,7 +434,9 @@ nav.tabs {
 .selbar-top span { flex: 1; font-weight: 700; }
 .selbar-top button { color: var(--accent); font-weight: 600; font-size: 13px; }
 .selbar select { font-size: 14px; padding: 9px 10px; }
-body.selecting main { padding-bottom: 170px; }
+body.selecting main { padding-bottom: 210px; }
+.sel-del { width: 100%; margin-top: 8px; padding: 8px; font-size: 13px; font-weight: 600; color: var(--danger); }
+.sel-del:disabled { opacity: .4; }
 
 /* Paneles deslizables */
 .sheet { border: 1px solid var(--card-border); border-bottom: 0; }
@@ -509,7 +511,7 @@ body.selecting main { padding-bottom: 170px; }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 12 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 13 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -553,6 +555,7 @@ body.selecting main { padding-bottom: 170px; }
 <div class="selbar" id="selbar" hidden>
   <div class="selbar-top"><span id="selInfo"></span><button id="selAll">Todos</button><button id="selCancel">Cancelar</button></div>
   <div class="bud-edit"><select id="selCat" aria-label="Nueva categoría"></select><button class="btn-small" id="selApply">Mover</button></div>
+  <button class="sel-del" id="selDel">🗑️ Borrar los seleccionados</button>
 </div>
 
 <nav class="tabs">
@@ -1088,7 +1091,16 @@ body.selecting main { padding-bottom: 170px; }
     $('selCat').innerHTML = `<option value="">Mover a categoría…</option>` + state.cats.map(c => `<option value="${esc(c.id)}">${c.emoji} ${esc(c.name)}${c.fuera ? ' (no suma)' : ''}</option>`).join('');
     $('selCat').value = keep;
     $('selApply').disabled = !chosen.length || !$('selCat').value;
+    $('selDel').disabled = !chosen.length;
   }
+  $('selDel').onclick = () => {
+    const chosen = state.items.filter(i => selIds.has(i.id));
+    if (!chosen.length) return;
+    if (!confirm(`¿Borrar ${chosen.length} ${chosen.length === 1 ? 'movimiento' : 'movimientos'} (${money(sumOf(chosen))})? No se puede deshacer.`)) return;
+    state.items = state.items.filter(i => !selIds.has(i.id));
+    persist(); setSelMode(false); render();
+    toast(`🗑️ ${chosen.length} ${chosen.length === 1 ? 'movimiento borrado' : 'movimientos borrados'}`);
+  };
   $('selToggle').onclick = () => setSelMode(true);
   $('selCancel').onclick = () => setSelMode(false);
   $('selAll').onclick = () => {
@@ -1622,6 +1634,7 @@ body.selecting main { padding-bottom: 170px; }
   $('iBack').onclick = () => { $('impStep1').hidden = false; $('impStep2').hidden = true; };
 
   $('iDate').addEventListener('change', () => { $('iDate').dataset.touched = '1'; });
+  const NO_SALE = (cat) => `No sale de tu bolsillo (${catById(cat).name}): no se importa`;
   let impMeta = {};
   function analyze(text) {
     const mp = isMP(text);
@@ -1666,8 +1679,11 @@ body.selecting main { padding-bottom: 170px; }
     $('iMes').value = defMes;
     impRows = rows.map(r => {
       const dup = state.items.some(i => i.pay === pay && i.date === r.date && Math.abs(i.amount - r.amount) < 1);
-      const why = r.why || (r.negative ? 'Devolución / crédito' : (r.isUsd && !(r.amount > 0)) ? 'USD sin cotización' : dup ? 'Ya cargado' : '');
-      return { ...r, pay, cat: guessCat(r.desc), on: !why, why };
+      const cat = guessCat(r.desc);
+      // Lo que cae en una categoría "no suma" (ej. Limpieza departamento) directamente no se importa
+      const why = r.why || (r.negative ? 'Devolución / crédito' : (r.isUsd && !(r.amount > 0)) ? 'USD sin cotización' : dup ? 'Ya cargado'
+        : cat && catById(cat).fuera ? NO_SALE(cat) : '');
+      return { ...r, pay, cat, on: !why, why };
     });
     drawImp();
     $('impStep1').hidden = true; $('impStep2').hidden = false;
@@ -1703,10 +1719,15 @@ body.selecting main { padding-bottom: 170px; }
     }
     if (t.dataset.c != null) {
       const r = impRows[+t.dataset.c];
-      r.cat = t.value;
-      // Aplicar la misma categoría al resto del mismo comercio sin categoría
       const k = ruleKey(r.desc);
-      if (k && t.value) impRows.forEach(x => { if (!x.cat && ruleKey(x.desc) === k) x.cat = t.value; });
+      // La categoría elegida se aplica a este y al resto del mismo comercio/persona sin categoría
+      const same = impRows.filter(x => x === r || (k && t.value && !x.cat && ruleKey(x.desc) === k));
+      same.forEach(x => {
+        x.cat = t.value;
+        // Categoría "no suma" → no se importa; si se saca de ahí, vuelve a importarse
+        if (t.value && catById(t.value).fuera) { x.why = NO_SALE(t.value); x.on = false; }
+        else if (x.why && x.why.startsWith('No sale')) { x.why = ''; x.on = x.amount > 0; }
+      });
     }
     drawImp();
   });
@@ -1714,6 +1735,8 @@ body.selecting main { padding-bottom: 170px; }
     const sel = impRows.filter(r => r.on && r.amount > 0);
     const fallback = state.cats.some(c => c.id === 'otros') ? 'otros' : state.cats[state.cats.length - 1].id;
     const mes = $('iMes').value, imp = uid();   // imp: identifica este resumen (para cambiarle el mes o borrarlo después)
+    // Lo que quedó afuera por ir a una categoría "no suma" igual se recuerda, para descartarlo solo la próxima vez
+    impRows.filter(r => !r.on && r.cat && catById(r.cat).fuera).forEach(r => { const k = ruleKey(r.desc); if (k) state.rules[k] = r.cat; });
     sel.forEach(r => {
       const k = ruleKey(r.desc);
       if (k && r.cat) state.rules[k] = r.cat;   // solo se recuerda lo que elegiste vos
