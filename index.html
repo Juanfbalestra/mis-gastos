@@ -378,6 +378,11 @@ nav.tabs {
 }
 .fab { border-radius: 20px; box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 14px 28px -8px rgba(192, 38, 211, .6); }
 
+/* Botón que abre el selector de archivos: el input invisible lo cubre entero */
+.file-btn { position: relative; display: block; text-align: center; overflow: hidden; cursor: pointer; }
+.file-btn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+.btn-line.file-btn { text-align: left; }
+
 /* Paneles deslizables */
 .sheet { border: 1px solid var(--card-border); border-bottom: 0; }
 .sheet h3 { position: sticky; top: -10px; background: var(--card); padding: 6px 0 8px; z-index: 1; letter-spacing: -.4px; }
@@ -459,8 +464,7 @@ nav.tabs {
       <p class="hint">Tus gastos se guardan solo en este dispositivo. Descargá un respaldo de vez en cuando (por ejemplo, a fin de mes) y guardalo en Drive o mandátelo por mail.</p>
       <button class="btn-line" id="expCsv">📊 Descargar Excel (CSV)</button>
       <button class="btn-line" id="expJson">💾 Descargar respaldo completo</button>
-      <button class="btn-line" id="impJson">📥 Restaurar desde respaldo</button>
-      <input type="file" id="impFile" accept=".json,application/json" hidden>
+      <label class="btn-line file-btn" style="display:block">📥 Restaurar desde respaldo<input type="file" id="impFile"></label>
       <p class="hint" id="lastBackup"></p>
     </div>
     <div class="card">
@@ -515,8 +519,8 @@ nav.tabs {
     </div>
     <div class="label">Cotización dólar (para consumos en USD)</div>
     <input type="text" id="iUsd" inputmode="decimal" placeholder="Ej: 1450 — vacío = no importar USD">
-    <button class="primary" id="iPdfBtn">📄 Elegir PDF del resumen</button>
-    <input type="file" id="iPdf" accept="application/pdf,.pdf" hidden>
+    <!-- El input va encima del botón (invisible): en iPhone es lo más confiable. Sin "accept" para que iOS no grisee archivos; el tipo se controla al leerlo. -->
+    <label class="primary file-btn">📄 Elegir PDF del resumen<input type="file" id="iPdf"></label>
     <p class="hint" style="margin-top:14px">¿El PDF no se lee bien? Abrilo, copiá todo el texto (o las filas del Excel del banco) y pegalo acá:</p>
     <textarea id="iText" placeholder="23/09/26  CARREFOUR HIPER 012345   45.320,50"></textarea>
     <button class="btn-line" id="iParse" style="margin-top:8px">Analizar texto pegado</button>
@@ -1151,7 +1155,6 @@ nav.tabs {
     download(`respaldo-gastos-${todayStr()}.json`, JSON.stringify(state, null, 1), 'application/json');
     markBackup();
   };
-  $('impJson').onclick = () => $('impFile').click();
   $('impFile').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try {
@@ -1437,9 +1440,9 @@ nav.tabs {
     $('iInfo').innerHTML = (impMeta.found && impMeta.found.length ? `Detecté: ${esc(impMeta.found.join(' · '))}<br>` : '') +
       (impMeta.check ? `<b>${esc(impMeta.check)}</b><br>` : '') +
       `${impRows.length} consumos. Revisá las categorías: las que corrijas se recuerdan para el próximo resumen.` +
-      (missing ? `<br><b>Faltan categorizar ${missing}.</b>` : '');
+      (missing ? `<br><b>${missing} sin categoría:</b> si importás así, van a 📦 Otros y después los podés cambiar.` : '');
     $('iSave').textContent = `Importar ${sel.length} consumos · ${money(tot)}`;
-    $('iSave').disabled = !sel.length || missing > 0;
+    $('iSave').disabled = !sel.length;
   }
   $('iRows').addEventListener('change', e => {
     const t = e.target;
@@ -1457,10 +1460,12 @@ nav.tabs {
     drawImp();
   });
   $('iSave').onclick = () => {
-    const sel = impRows.filter(r => r.on && r.cat && r.amount > 0);
+    const sel = impRows.filter(r => r.on && r.amount > 0);
+    const fallback = state.cats.some(c => c.id === 'otros') ? 'otros' : state.cats[state.cats.length - 1].id;
     sel.forEach(r => {
       const k = ruleKey(r.desc);
-      if (k) state.rules[k] = r.cat;
+      if (k && r.cat) state.rules[k] = r.cat;   // solo se recuerda lo que elegiste vos
+      if (!r.cat) r.cat = fallback;
       const note = r.desc + (r.cuota ? ` (cuota ${r.cuota})` : '') + (r.usd ? ` (U$S ${String(r.usd).replace('.', ',')})` : '');
       state.items.push({ id: uid(), created: Date.now(), amount: Math.round(r.amount * 100) / 100, cat: r.cat, pay: r.pay, note, date: r.date, src: 'resumen' });
     });
@@ -1471,12 +1476,13 @@ nav.tabs {
     toast(`¡${sel.length} consumos importados! 🎉`); burst('💳');
   };
   $('iParse').onclick = () => analyze($('iText').value);
-  $('iPdfBtn').onclick = () => $('iPdf').click();
   $('iPdf').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try {
+      const buf = await f.arrayBuffer();
+      if (new TextDecoder().decode(new Uint8Array(buf.slice(0, 5))) !== '%PDF-') { toast('Ese archivo no es un PDF 🤔'); return; }
       toast('Leyendo PDF…');
-      analyze(await pdfToText(await f.arrayBuffer()));
+      analyze(await pdfToText(buf));
     } catch (err) {
       console.error(err);
       toast(err && err.message === 'nolib' ? 'Para leer PDFs hace falta internet la primera vez' : 'No pude leer el PDF. Probá pegando el texto.');
