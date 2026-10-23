@@ -26,5 +26,13 @@ Tus datos
 
 Para usarla en el celular
 -------------------------
-  Hay que publicarla en GitHub Pages (gratis). Una vez publicada:
-  abrís la dirección en Chrome del celular > menú ⋮ > "Agregar a pantalla de inicio".
+  Dirección: https://juanfbalestra.github.io/mis-gastos/
+  Abrila en Chrome del celular > menú ⋮ > "Agregar a pantalla de inicio" (o "Instalar app").
+  En iPhone: Safari > botón Compartir > "Agregar a inicio".
+
+Dónde está publicada
+--------------------
+  Repositorio: https://github.com/Juanfbalestra/mis-gastos (cuenta Juanfbalestra).
+  Es público: se ve el código de la app vacía, nunca tus gastos.
+  Si cambiás algo en esta carpeta, hay que volver a subirlo (git push) para que
+  llegue al celular; la app se actualiza sola la próxima vez que la abrís con internet.
