@@ -1,0 +1,30 @@
+MIS GASTOS
+==========
+
+Qué hay en esta carpeta
+-----------------------
+  index.html            La app completa.
+  sw.js                 Hace que funcione sin internet.
+  manifest.webmanifest  Nombre y colores para instalarla como app.
+  icon.svg              El ícono.
+  Abrir Mis Gastos.bat  Doble clic para usarla en esta PC.
+
+Cómo se usa
+-----------
+  - Gastos en efectivo, débito, Mercado Pago o transferencia: botón "+".
+  - Tarjetas de crédito: Movimientos > "Importar resumen de tarjeta" y elegís el PDF.
+    Probado con Visa y Amex de Santander, y Naranja X.
+    Si dice "Cuadra con el total del resumen", no se perdió nada.
+  - Si pagás con tarjeta, NO lo cargues a mano: llega con el resumen.
+
+Tus datos
+---------
+  Quedan guardados solo en el navegador del dispositivo donde la usás
+  (el celular y la PC tienen cada uno los suyos, no se sincronizan).
+  Una vez por mes: Ajustes > "Descargar respaldo completo" y guardalo en Drive.
+  Si cambiás de celular: Ajustes > "Restaurar desde respaldo".
+
+Para usarla en el celular
+-------------------------
+  Hay que publicarla en GitHub Pages (gratis). Una vez publicada:
+  abrís la dirección en Chrome del celular > menú ⋮ > "Agregar a pantalla de inicio".
