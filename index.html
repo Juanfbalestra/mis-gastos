@@ -1856,6 +1856,7 @@ body.selecting main { padding-bottom: 210px; }
   // mode: 'unlock' (al abrir) | 'verify' (antes de cambiar/quitar) | 'set1' / 'set2' (elegir y repetir)
   function showLock(mode, title, next, msg = '') {
     pinMode = mode; pinNext = next || null; pinBuf = '';
+    if (mode === 'unlock' && state.bio) title = 'Usá Face ID o tu PIN';
     $('lockTitle').textContent = title; $('lockMsg').textContent = msg;
     $('lockForgot').hidden = mode !== 'unlock'; $('lockCancel').hidden = mode === 'unlock';
     $('lockBio').hidden = !(mode === 'unlock' && state.bio);
