@@ -1019,7 +1019,7 @@ body.selecting main { padding-bottom: 170px; }
   let selMode = false, shownList = [];
   const selIds = new Set();
   function setSelMode(on) {
-    selMode = on; selIds.clear();
+    selMode = on; selIds.clear(); $('selCat').value = '';
     document.body.classList.toggle('selecting', on);
     $('fab').hidden = on || !$('view-ajustes').hidden;
     renderMovs();
