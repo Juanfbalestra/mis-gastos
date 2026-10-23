@@ -118,6 +118,9 @@ main { padding: 0 16px 72px; max-width: 640px; margin: 0 auto; }
 .inc-bar i { display: block; height: 100%; background: #fff; border-radius: 4px; transform-origin: left; animation: grow .8s cubic-bezier(.2,.8,.2,1) both; }
 .inc-bar.over i { background: #fecdd3; }
 .inc small { opacity: .9; }
+.excl { margin-top: 8px; font-size: 12.5px; opacity: .92; }
+.excl span { opacity: .8; }
+.tag-out { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--line); color: var(--muted); margin-left: 4px; vertical-align: 1px; }
 
 .insight {
   display: flex; gap: 12px; align-items: center; background: var(--accent-soft); color: var(--text);
@@ -222,7 +225,9 @@ input[type=text], input[type=date], select {
   transform: translateX(-50%) translateY(10px) scale(.95);
 }
 .toast.show { opacity: 1; transform: translateX(-50%); }
-.cat-edit { display: grid; grid-template-columns: 44px 1fr 36px; gap: 6px; margin-bottom: 6px; }
+.cat-edit { display: grid; grid-template-columns: 44px 1fr auto 36px; gap: 6px; margin-bottom: 6px; align-items: center; }
+.suma-btn { font-size: 12px; font-weight: 700; padding: 6px 9px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); white-space: nowrap; }
+.suma-btn.off { background: var(--line); color: var(--muted); }
 .cat-edit input { padding: 8px; }
 .cat-edit input.e { text-align: center; }
 [hidden] { display: none !important; }
@@ -387,6 +392,21 @@ nav.tabs {
 .imp-row:first-child { border-top: 0; padding-top: 0; }
 .imp-row select { font-size: 14px; padding: 9px 10px; }
 
+/* Selección múltiple */
+.sel-toggle { width: 100%; padding: 10px; border-radius: 14px; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
+.mov.pick .tile { transition: background .15s; }
+.mov.pick.on { background: var(--accent-soft) !important; }
+.mov.pick.on .tile { background: var(--accent); color: #fff; font-size: 20px; font-weight: 800; }
+.selbar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 7; max-width: 616px; margin: 0 auto;
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; padding: 12px; box-shadow: 0 16px 40px -10px rgba(27, 21, 48, .4);
+}
+.selbar-top { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; font-size: 14px; }
+.selbar-top span { flex: 1; font-weight: 700; }
+.selbar-top button { color: var(--accent); font-weight: 600; font-size: 13px; }
+.selbar select { font-size: 14px; padding: 9px 10px; }
+body.selecting main { padding-bottom: 170px; }
+
 /* Paneles deslizables */
 .sheet { border: 1px solid var(--card-border); border-bottom: 0; }
 .sheet h3 { position: sticky; top: -10px; background: var(--card); padding: 6px 0 8px; z-index: 1; letter-spacing: -.4px; }
@@ -416,6 +436,7 @@ nav.tabs {
         <div><small>Tu día más gastador</small><b id="topDay">—</b></div>
       </div>
       <div class="inc" id="inc" hidden></div>
+      <div class="excl" id="excl" hidden></div>
     </div>
     <div class="insight" id="insight" hidden></div>
     <div class="card">
@@ -452,13 +473,14 @@ nav.tabs {
         <select id="fPay" aria-label="Filtrar por medio de pago"></select>
       </div>
       <div class="filter-sum" id="fSum"></div>
+      <button class="sel-toggle" id="selToggle">☑️ Seleccionar varios para cambiarles la categoría</button>
     </div>
     <div id="movs"></div>
   </section>
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 10 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 11 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -490,6 +512,12 @@ nav.tabs {
 </main>
 
 <button class="fab" id="fab" aria-label="Cargar gasto">+</button>
+
+<!-- Barra de selección múltiple -->
+<div class="selbar" id="selbar" hidden>
+  <div class="selbar-top"><span id="selInfo"></span><button id="selAll">Todos</button><button id="selCancel">Cancelar</button></div>
+  <div class="bud-edit"><select id="selCat" aria-label="Nueva categoría"></select><button class="btn-small" id="selApply">Mover</button></div>
+</div>
 
 <nav class="tabs">
   <button data-v="resumen" class="on"><span>📊</span>Resumen</button>
@@ -574,9 +602,10 @@ nav.tabs {
     ['seguros', '🛡️', 'Seguros'],
     ['mascotas', '🐶', 'Mascotas'],
     ['deporte', '🏋️', 'Deporte / club'],
+    ['limpieza', '🧹', 'Limpieza departamento', true],   // true = no suma en mis gastos
     ['banco', '🏦', 'Impuestos y comisiones'],
     ['otros', '📦', 'Otros'],
-  ].map(([id, emoji, name]) => ({ id, emoji, name }));
+  ].map(([id, emoji, name, fuera]) => ({ id, emoji, name, ...(fuera ? { fuera: true } : {}) }));
   const DEFAULT_PAYS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
 
   // ---------- Estado y persistencia ----------
@@ -591,6 +620,10 @@ nav.tabs {
         if (s.cats && (s.catsV || 1) < 2) {
           ['seguros', 'mascotas', 'deporte'].forEach(id => { if (!s.cats.some(c => c.id === id)) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === id)); });
           s.catsV = 2;
+        }
+        if (s.cats && s.catsV < 3) {
+          if (!s.cats.some(c => c.id === 'limpieza')) s.cats.splice(s.cats.length - 2, 0, DEFAULT_CATS.find(c => c.id === 'limpieza'));
+          s.catsV = 3;
         }
         // Una sola vez: los resúmenes importados antes de existir "mes" pasan al mes que les corresponde.
         // Se toma la última fecha de cada resumen (≈ cierre): si es hasta el día 15, cuenta en el mes anterior.
@@ -609,10 +642,10 @@ nav.tabs {
           });
           s.mesV = 1;
         }
-        return { catsV: 2, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
+        return { catsV: 3, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
       }
     } catch (e) {}
-    return { catsV: 2, mesV: 1, cats: DEFAULT_CATS.slice(), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
+    return { catsV: 3, mesV: 1, cats: DEFAULT_CATS.map(c => ({ ...c })), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
   }
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -691,6 +724,9 @@ nav.tabs {
   // Montos cortos para etiquetas chicas: $850k, $1,2M
   const short = (n) => n >= 1e6 ? `$${(n / 1e6).toFixed(1).replace('.', ',')}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : n > 0 ? `$${Math.round(n)}` : '';
   const sumOf = (list) => list.reduce((a, i) => a + i.amount, 0);
+  // Gastos que cuentan: los de categorías marcadas "no suma" (ej. Limpieza departamento) quedan fuera de totales y gráficos
+  const suma = (i) => !catById(i.cat).fuera;
+  const counted = () => state.items.filter(suma);
   const EMPTY = `<div class="empty"><span class="big">🐷</span>Tu chanchito está esperando.<br>Tocá <b>+</b> y anotá tu primer gasto.</div>`;
 
   // ---------- Mes seleccionado ----------
@@ -711,12 +747,17 @@ nav.tabs {
   // ---------- Render ----------
   function render() {
     $('monthLbl').textContent = monthLabel(cur);
-    const items = state.items.filter(i => mOf(i) === cur);
-    const prev = state.items.filter(i => mOf(i) === shiftMonth(cur, -1));
+    const items = counted().filter(i => mOf(i) === cur);
+    const prev = counted().filter(i => mOf(i) === shiftMonth(cur, -1));
     const total = items.reduce((a, i) => a + i.amount, 0);
     const prevTotal = prev.reduce((a, i) => a + i.amount, 0);
 
     countUp($('total'), total);
+    // Lo que se pagó pero no sale de tu presupuesto (categorías "no suma")
+    const fuera = state.items.filter(i => mOf(i) === cur && !suma(i));
+    const fueraCats = [...new Set(fuera.map(i => i.cat))].map(id => catById(id));
+    $('excl').hidden = !fuera.length;
+    $('excl').innerHTML = fuera.length ? `${fueraCats.map(c => c.emoji).join(' ')} Fuera de tu presupuesto: <b>${money(sumOf(fuera))}</b> <span>(${esc(fueraCats.map(c => c.name).join(', '))})</span>` : '';
     const h = new Date().getHours();
     $('hello').textContent = h < 6 ? '¿Desvelado? 🌙' : h < 13 ? '¡Buen día! ☀️' : h < 20 ? '¡Buenas tardes! 👋' : '¡Buenas noches! 🌙';
 
@@ -815,8 +856,8 @@ nav.tabs {
     $('budCard').hidden = !buds && !items.length;
 
     // Evolución de los últimos 6 meses
-    $('evo').innerHTML = evoBars(k => sumOf(state.items.filter(i => mOf(i) === k)), 'data-m');
-    const last6 = [0, 1, 2, 3, 4, 5].map(n => sumOf(state.items.filter(i => mOf(i) === shiftMonth(cur, -n)))).filter(v => v > 0);
+    $('evo').innerHTML = evoBars(k => sumOf(counted().filter(i => mOf(i) === k)), 'data-m');
+    const last6 = [0, 1, 2, 3, 4, 5].map(n => sumOf(counted().filter(i => mOf(i) === shiftMonth(cur, -n)))).filter(v => v > 0);
     $('evoHint').textContent = last6.length > 1 ? `Promedio de los meses con datos: ${money(sumOf(last6.map(v => ({ amount: v }))) / last6.length)}. Tocá un mes para verlo.` : 'Con el correr de los meses vas a ver acá si venís subiendo o bajando.';
 
     // Dato destacado: la categoría que más se lleva
@@ -925,7 +966,8 @@ nav.tabs {
   $('buds').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) openCat(b.dataset.cat); });
 
   // ---------- Lista de movimientos agrupada por día ----------
-  function movList(list) {
+  // sel: en modo selección, el Set de ids marcados (el ícono se reemplaza por ✓)
+  function movList(list, sel) {
     const sorted = list.slice().sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
     const days = [];
     sorted.forEach(i => {
@@ -941,9 +983,9 @@ nav.tabs {
       lbl = g.date === todayStr() ? 'Hoy' : lbl.charAt(0).toUpperCase() + lbl.slice(1);
       return `<div class="day-group"><div class="day"><span>${lbl}</span><span>${money(sumOf(g.items))}</span></div>` +
         g.items.map(i => {
-          const c = catById(i.cat);
-          return `<button class="mov" data-id="${i.id}"><div class="tile" style="--h:${hue(i.cat)}">${c.emoji}</div>
-            <div><div class="t">${esc(i.note || c.name)}</div><div class="s">${esc(i.note ? c.name + ' · ' : '')}${esc(i.pay || '')}</div></div>
+          const c = catById(i.cat), on = sel && sel.has(i.id);
+          return `<button class="mov${sel ? ' pick' : ''}${on ? ' on' : ''}" data-id="${i.id}"><div class="tile" style="--h:${hue(i.cat)}">${on ? '✓' : c.emoji}</div>
+            <div><div class="t">${esc(i.note || c.name)}</div><div class="s">${esc(i.note ? c.name + ' · ' : '')}${esc(i.pay || '')}${c.fuera ? '<span class="tag-out">no suma</span>' : ''}</div></div>
             <div class="a">${money(i.amount)}</div></button>`;
         }).join('') + `</div>`;
     }).join('');
@@ -965,9 +1007,56 @@ nav.tabs {
     $('fPay').innerHTML = `<option value="">Todos los medios</option>` + state.pays.map(p => `<option>${esc(p)}</option>`).join('');
     $('fPay').value = filt.pay;
     const active = filt.q || filt.cat || filt.pay || filt.period !== 'mes';
-    $('fSum').innerHTML = `<span>${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}</span>${active ? '<button id="fClear">Limpiar filtros</button>' : ''}<b>${money(sumOf(list))}</b>`;
-    $('movs').innerHTML = movList(list) || (state.items.length && active ? '<div class="empty"><span class="big">🔎</span>No encontré movimientos con esos filtros.</div>' : EMPTY);
+    const out = list.filter(i => !suma(i));
+    $('fSum').innerHTML = `<span>${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}${out.length ? ` · ${money(sumOf(out))} no suman` : ''}</span>${active ? '<button id="fClear">Limpiar filtros</button>' : ''}<b>${money(sumOf(list.filter(suma)))}</b>`;
+    shownList = list;
+    $('movs').innerHTML = movList(list, selMode ? selIds : null) || (state.items.length && active ? '<div class="empty"><span class="big">🔎</span>No encontré movimientos con esos filtros.</div>' : EMPTY);
+    $('selToggle').hidden = selMode || !list.length;
+    updateSelbar();
   }
+
+  // ---------- Selección múltiple: cambiar la categoría de varios a la vez ----------
+  let selMode = false, shownList = [];
+  const selIds = new Set();
+  function setSelMode(on) {
+    selMode = on; selIds.clear();
+    document.body.classList.toggle('selecting', on);
+    $('fab').hidden = on || !$('view-ajustes').hidden;
+    renderMovs();
+  }
+  function updateSelbar() {
+    $('selbar').hidden = !selMode;
+    if (!selMode) return;
+    const chosen = state.items.filter(i => selIds.has(i.id));
+    $('selInfo').textContent = chosen.length ? `${chosen.length} ${chosen.length === 1 ? 'seleccionado' : 'seleccionados'} · ${money(sumOf(chosen))}` : 'Tocá los movimientos';
+    const allOn = shownList.length && shownList.every(i => selIds.has(i.id));
+    $('selAll').textContent = allOn ? 'Ninguno' : 'Todos';
+    const keep = $('selCat').value;
+    $('selCat').innerHTML = `<option value="">Mover a categoría…</option>` + state.cats.map(c => `<option value="${esc(c.id)}">${c.emoji} ${esc(c.name)}${c.fuera ? ' (no suma)' : ''}</option>`).join('');
+    $('selCat').value = keep;
+    $('selApply').disabled = !chosen.length || !$('selCat').value;
+  }
+  $('selToggle').onclick = () => setSelMode(true);
+  $('selCancel').onclick = () => setSelMode(false);
+  $('selAll').onclick = () => {
+    const allOn = shownList.every(i => selIds.has(i.id));
+    shownList.forEach(i => allOn ? selIds.delete(i.id) : selIds.add(i.id));
+    renderMovs();
+  };
+  $('selCat').onchange = updateSelbar;
+  $('selApply').onclick = () => {
+    const cat = $('selCat').value; if (!cat) return;
+    const chosen = state.items.filter(i => selIds.has(i.id));
+    chosen.forEach(i => {
+      i.cat = cat;
+      // Se recuerda para los próximos resúmenes: el mismo comercio o persona va a caer en esta categoría
+      const k = i.note ? ruleKey(merchantName(i.note)) : '';
+      if (k) state.rules[k] = cat;
+    });
+    const c = catById(cat);
+    persist(); setSelMode(false); render();
+    toast(`${chosen.length} ${chosen.length === 1 ? 'movimiento' : 'movimientos'} → ${c.emoji} ${c.name}${c.fuera ? ' (no suma)' : ''}`, 3000);
+  };
   $('fq').addEventListener('input', () => { filt.q = $('fq').value; renderMovs(); });
   $('fCat').addEventListener('change', () => { filt.cat = $('fCat').value; renderMovs(); });
   $('fPay').addEventListener('change', () => { filt.pay = $('fPay').value; renderMovs(); });
@@ -976,7 +1065,11 @@ nav.tabs {
     Object.assign(filt, { q: '', period: 'mes', cat: '', pay: '' }); $('fq').value = ''; renderMovs();
   });
   $('movs').addEventListener('click', e => {
-    const b = e.target.closest('.mov'); if (b) openSheet(b.dataset.id);
+    const b = e.target.closest('.mov'); if (!b) return;
+    if (!selMode) return openSheet(b.dataset.id);
+    const id = b.dataset.id;
+    selIds.has(id) ? selIds.delete(id) : selIds.add(id);
+    renderMovs();
   });
 
   // ---------- Detalle de una categoría o de una tarjeta/cuenta (mismo panel) ----------
@@ -996,8 +1089,8 @@ nav.tabs {
   // Detalle de una tarjeta o cuenta: total, en qué categorías se fue, evolución y movimientos
   function renderPay() {
     const key = openPayKey;
-    const list = state.items.filter(i => payOf(i) === key && mOf(i) === cur);
-    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => mOf(i) === cur));
+    const list = counted().filter(i => payOf(i) === key && mOf(i) === cur);
+    const spent = sumOf(list), monthTotal = sumOf(counted().filter(i => mOf(i) === cur));
     const m = new Map();
     list.forEach(i => m.set(i.cat, (m.get(i.cat) || 0) + i.amount));
     const byC = [...m.entries()].sort((a, b) => b[1] - a[1]);
@@ -1009,7 +1102,7 @@ nav.tabs {
       ${byC.map(([k, v], idx) => { const c = catById(k), pct = spent ? v / spent * 100 : 0; return `<button class="cat-row" data-cat="${esc(k)}"><div class="tile" style="--h:${hue(k)}">${c.emoji}</div><div class="name">${esc(c.name)} <span class="chev">›</span></div>
         <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}%</span></div><div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms"></i></div></button>`; }).join('') || '<p class="hint">Sin gastos este mes.</p>'}
       <div class="label">Últimos 6 meses</div>
-      ${evoBars(k => sumOf(state.items.filter(i => payOf(i) === key && mOf(i) === k)), 'data-cm')}
+      ${evoBars(k => sumOf(counted().filter(i => payOf(i) === key && mOf(i) === k)), 'data-cm')}
       <div class="label">Movimientos</div>
       ${movList(list) || '<p class="hint">No hay movimientos en el mes.</p>'}`;
   }
@@ -1018,12 +1111,12 @@ nav.tabs {
     if (!openCatId) return;
     const id = openCatId, c = catById(id);
     const list = state.items.filter(i => i.cat === id && mOf(i) === cur);
-    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => mOf(i) === cur));
+    const spent = sumOf(list), monthTotal = sumOf(counted().filter(i => mOf(i) === cur));
     const b = state.budgets[id] || 0;
     $('catTitle').textContent = `${c.emoji} ${c.name}`;
     $('catBody').innerHTML = `
       <div class="big-amt">${money(spent)}</div>
-      <div class="hint">${monthLabel(cur)} · ${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}${monthTotal ? ` · ${(spent / monthTotal * 100).toFixed(0)}% del mes` : ''}</div>
+      <div class="hint">${monthLabel(cur)} · ${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}${c.fuera ? ' · <b>no suma en tus gastos</b> (se cambia en Ajustes → Categorías)' : monthTotal ? ` · ${(spent / monthTotal * 100).toFixed(0)}% del mes` : ''}</div>
       ${b ? `<div style="margin-top:12px">${budgetBlock(id, spent)}</div>` : ''}
       <div class="label">Tope mensual (presupuesto)</div>
       <div class="bud-edit"><input type="text" id="budIn" inputmode="decimal" placeholder="Sin tope · ej: 150.000" value="${b ? new Intl.NumberFormat('es-AR').format(b) : ''}"><button class="btn-small" id="budSave">${b ? 'Cambiar' : 'Poner tope'}</button></div>
@@ -1049,6 +1142,7 @@ nav.tabs {
 
   // ---------- Pestañas ----------
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+    if (selMode) setSelMode(false);
     document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x === b));
     ['resumen', 'movs', 'ajustes'].forEach(v => $('view-' + v).hidden = v !== b.dataset.v);
     $('fab').hidden = b.dataset.v === 'ajustes';
@@ -1168,6 +1262,7 @@ nav.tabs {
     $('catList').innerHTML = state.cats.map((c, i) => `<div class="cat-edit">
       <input type="text" class="e" data-i="${i}" data-f="emoji" value="${esc(c.emoji)}" maxlength="4" aria-label="Emoji">
       <input type="text" data-i="${i}" data-f="name" value="${esc(c.name)}" aria-label="Nombre">
+      <button class="suma-btn ${c.fuera ? 'off' : ''}" data-fuera="${i}" aria-label="${c.fuera ? 'No suma en mis gastos' : 'Suma en mis gastos'}">${c.fuera ? 'No suma' : 'Suma'}</button>
       <button class="icon-btn" data-del-cat="${i}" aria-label="Quitar">🗑️</button></div>`).join('');
     $('payList').innerHTML = state.pays.map((p, i) => `<div class="cat-edit" style="grid-template-columns:1fr 36px">
       <input type="text" data-pi="${i}" value="${esc(p)}" aria-label="Medio de pago">
@@ -1179,6 +1274,14 @@ nav.tabs {
     persist(); render();
   });
   $('catList').addEventListener('click', e => {
+    const f = e.target.closest('[data-fuera]');
+    if (f) {
+      const c = state.cats[+f.dataset.fuera];
+      if (c.fuera) delete c.fuera; else c.fuera = true;
+      persist(); render();
+      toast(c.fuera ? `${c.emoji} ${c.name}: ya no suma en tus gastos` : `${c.emoji} ${c.name}: vuelve a sumar en tus gastos`);
+      return;
+    }
     const b = e.target.closest('[data-del-cat]'); if (!b) return;
     const c = state.cats[+b.dataset.delCat];
     const used = state.items.filter(i => i.cat === c.id).length;
