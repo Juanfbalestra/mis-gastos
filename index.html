@@ -383,6 +383,10 @@ nav.tabs {
 .file-btn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
 .btn-line.file-btn { text-align: left; }
 
+.imp-row { padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.imp-row:first-child { border-top: 0; padding-top: 0; }
+.imp-row select { font-size: 14px; padding: 9px 10px; }
+
 /* Paneles deslizables */
 .sheet { border: 1px solid var(--card-border); border-bottom: 0; }
 .sheet h3 { position: sticky; top: -10px; background: var(--card); padding: 6px 0 8px; z-index: 1; letter-spacing: -.4px; }
@@ -459,6 +463,10 @@ nav.tabs {
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
       <div class="bud-edit"><input type="text" id="incIn" inputmode="decimal" placeholder="Ej: 3.200.000"><button class="btn-small" id="incSave">Guardar</button></div>
     </div>
+    <div class="card" id="impsCard" hidden>
+      <h2><span class="h-ic">📄</span><span>Resúmenes importados<small>Elegí a qué mes corresponde cada uno, o borralo si lo cargaste mal</small></span></h2>
+      <div id="imps"></div>
+    </div>
     <div class="card">
       <h2><span class="h-ic">💾</span><span>Respaldo</span></h2>
       <p class="hint">Tus gastos se guardan solo en este dispositivo. Descargá un respaldo de vez en cuando (por ejemplo, a fin de mes) y guardalo en Drive o mandátelo por mail.</p>
@@ -526,6 +534,8 @@ nav.tabs {
     <button class="btn-line" id="iParse" style="margin-top:8px">Analizar texto pegado</button>
   </div>
   <div id="impStep2" hidden>
+    <div class="label" style="margin-top:4px">¿A qué mes corresponde este resumen?</div>
+    <select id="iMes"></select>
     <p class="hint" id="iInfo"></p>
     <div id="iRows"></div>
     <div class="imp-sum">
@@ -599,6 +609,8 @@ nav.tabs {
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const monthKey = (d) => d.slice(0, 7);
+  // Mes en que cuenta un gasto: el del resumen si vino de uno (i.mes), si no el de su fecha
+  const mOf = (i) => i.mes || monthKey(i.date);
   const catById = (id) => state.cats.find(c => c.id === id) || { emoji: '❔', name: 'Sin categoría' };
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -680,8 +692,8 @@ nav.tabs {
   // ---------- Render ----------
   function render() {
     $('monthLbl').textContent = monthLabel(cur);
-    const items = state.items.filter(i => monthKey(i.date) === cur);
-    const prev = state.items.filter(i => monthKey(i.date) === shiftMonth(cur, -1));
+    const items = state.items.filter(i => mOf(i) === cur);
+    const prev = state.items.filter(i => mOf(i) === shiftMonth(cur, -1));
     const total = items.reduce((a, i) => a + i.amount, 0);
     const prevTotal = prev.reduce((a, i) => a + i.amount, 0);
 
@@ -784,8 +796,8 @@ nav.tabs {
     $('budCard').hidden = !buds && !items.length;
 
     // Evolución de los últimos 6 meses
-    $('evo').innerHTML = evoBars(k => sumOf(state.items.filter(i => monthKey(i.date) === k)), 'data-m');
-    const last6 = [0, 1, 2, 3, 4, 5].map(n => sumOf(state.items.filter(i => monthKey(i.date) === shiftMonth(cur, -n)))).filter(v => v > 0);
+    $('evo').innerHTML = evoBars(k => sumOf(state.items.filter(i => mOf(i) === k)), 'data-m');
+    const last6 = [0, 1, 2, 3, 4, 5].map(n => sumOf(state.items.filter(i => mOf(i) === shiftMonth(cur, -n)))).filter(v => v > 0);
     $('evoHint').textContent = last6.length > 1 ? `Promedio de los meses con datos: ${money(sumOf(last6.map(v => ({ amount: v }))) / last6.length)}. Tocá un mes para verlo.` : 'Con el correr de los meses vas a ver acá si venís subiendo o bajando.';
 
     // Dato destacado: la categoría que más se lleva
@@ -874,7 +886,7 @@ nav.tabs {
   $('evo').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) { cur = b.dataset.m; render(); } });
 
   // ---------- Presupuestos ----------
-  const spentIn = (catId, month) => sumOf(state.items.filter(i => i.cat === catId && monthKey(i.date) === month));
+  const spentIn = (catId, month) => sumOf(state.items.filter(i => i.cat === catId && mOf(i) === month));
   function budStatus(spent, bud) {
     const p = spent / bud * 100;
     return p >= 100 ? ['bad', '🚨', `Te pasaste por ${money(spent - bud)}`]
@@ -924,7 +936,7 @@ nav.tabs {
   function renderMovs() {
     const today = todayStr(), q = norm(filt.q.trim());
     const list = state.items.filter(i =>
-      (filt.period === 'mes' ? monthKey(i.date) === cur : filt.period === 'todo' ? true : i.date >= daysAgo(+filt.period) && i.date <= today) &&
+      (filt.period === 'mes' ? mOf(i) === cur : filt.period === 'todo' ? true : i.date >= daysAgo(+filt.period) && i.date <= today) &&
       (!filt.cat || i.cat === filt.cat) && (!filt.pay || i.pay === filt.pay) &&
       (!q || norm(`${i.note || ''} ${catById(i.cat).name} ${i.pay || ''}`).includes(q)));
     const periods = [['mes', cur === monthKey(today) ? 'Este mes' : monthLabel(cur)], ['7', '7 días'], ['30', '30 días'], ['todo', 'Todo']];
@@ -965,8 +977,8 @@ nav.tabs {
   // Detalle de una tarjeta o cuenta: total, en qué categorías se fue, evolución y movimientos
   function renderPay() {
     const key = openPayKey;
-    const list = state.items.filter(i => payOf(i) === key && monthKey(i.date) === cur);
-    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => monthKey(i.date) === cur));
+    const list = state.items.filter(i => payOf(i) === key && mOf(i) === cur);
+    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => mOf(i) === cur));
     const m = new Map();
     list.forEach(i => m.set(i.cat, (m.get(i.cat) || 0) + i.amount));
     const byC = [...m.entries()].sort((a, b) => b[1] - a[1]);
@@ -978,7 +990,7 @@ nav.tabs {
       ${byC.map(([k, v], idx) => { const c = catById(k), pct = spent ? v / spent * 100 : 0; return `<button class="cat-row" data-cat="${esc(k)}"><div class="tile" style="--h:${hue(k)}">${c.emoji}</div><div class="name">${esc(c.name)} <span class="chev">›</span></div>
         <div class="amt">${money(v)} <span class="pct">${pct.toFixed(1)}%</span></div><div class="bar"><i style="width:${pct}%;animation-delay:${idx * 60}ms"></i></div></button>`; }).join('') || '<p class="hint">Sin gastos este mes.</p>'}
       <div class="label">Últimos 6 meses</div>
-      ${evoBars(k => sumOf(state.items.filter(i => payOf(i) === key && monthKey(i.date) === k)), 'data-cm')}
+      ${evoBars(k => sumOf(state.items.filter(i => payOf(i) === key && mOf(i) === k)), 'data-cm')}
       <div class="label">Movimientos</div>
       ${movList(list) || '<p class="hint">No hay movimientos en el mes.</p>'}`;
   }
@@ -986,8 +998,8 @@ nav.tabs {
     if (openPayKey) return renderPay();
     if (!openCatId) return;
     const id = openCatId, c = catById(id);
-    const list = state.items.filter(i => i.cat === id && monthKey(i.date) === cur);
-    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => monthKey(i.date) === cur));
+    const list = state.items.filter(i => i.cat === id && mOf(i) === cur);
+    const spent = sumOf(list), monthTotal = sumOf(state.items.filter(i => mOf(i) === cur));
     const b = state.budgets[id] || 0;
     $('catTitle').textContent = `${c.emoji} ${c.name}`;
     $('catBody').innerHTML = `
@@ -1064,10 +1076,12 @@ nav.tabs {
     else state.items.push({ id: uid(), created: Date.now(), ...data });
     state.lastPay = selPay;
     persist(); closeSheet();
-    cur = monthKey(data.date); render();
+    // Un consumo importado mantiene el mes de su resumen aunque se edite
+    const month = editing ? mOf(editing) : monthKey(data.date);
+    cur = month; render();
     // Aviso de presupuesto: solo cuando este gasto cruza el 80% o el 100% del tope
     const bud = state.budgets[data.cat];
-    const after = bud ? spentIn(data.cat, monthKey(data.date)) : 0, before = after - (editing ? 0 : amount);
+    const after = bud ? spentIn(data.cat, month) : 0, before = after - (editing ? 0 : amount);
     const cname = catById(data.cat).name;
     if (!editing && bud && after >= bud && before < bud) toast(`🚨 ${cname}: te pasaste del tope (${money(after)} de ${money(bud)})`, 4000);
     else if (!editing && bud && after >= bud * .8 && before < bud * .8) toast(`⚠️ ${cname}: ya usaste el ${Math.round(after / bud * 100)}% del tope`, 4000);
@@ -1088,7 +1102,49 @@ nav.tabs {
     else { delete state.income; toast('Presupuesto mensual quitado'); }
     persist(); render();
   };
+  // ---------- Resúmenes importados ----------
+  // Los importados antes de esta versión no tienen "imp": se agrupan por tarjeta y momento de importación.
+  const batchOf = (i) => i.imp || `${i.pay}|${Math.floor(i.created / 10000)}`;
+  function renderImports() {
+    const groups = new Map();
+    state.items.filter(i => i.src === 'resumen').forEach(i => {
+      const k = batchOf(i);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    });
+    $('impsCard').hidden = !groups.size;
+    const opts = [];
+    for (let n = -12; n <= 1; n++) opts.push(shiftMonth(monthKey(todayStr()), n));
+    $('imps').innerHTML = [...groups.entries()].sort((a, b) => b[1][0].created - a[1][0].created).map(([k, list]) => {
+      const dates = list.map(i => i.date).sort(), mes = list[0].mes || '';
+      const f = (d) => d.split('-').reverse().slice(0, 2).join('/');
+      const months = opts.includes(mes) || !mes ? opts : opts.concat(mes);
+      return `<div class="imp-row" data-b="${esc(k)}">
+        <div class="bud-top"><span>${payEmoji(list[0].pay)} <b>${esc(list[0].pay)}</b> · ${list.length} consumos</span><span><b>${money(sumOf(list))}</b></span></div>
+        <div class="hint">Compras del ${f(dates[0])} al ${f(dates[dates.length - 1])} · importado el ${new Date(list[0].created).toLocaleDateString('es-AR')}</div>
+        <div class="bud-edit" style="margin-top:8px"><select data-mes>${months.slice().sort().reverse().map(m => `<option value="${m}" ${m === mes ? 'selected' : ''}>📅 ${monthLabel(m)}</option>`).join('')}
+          <option value="" ${!mes ? 'selected' : ''}>Según la fecha de cada consumo</option></select>
+          <button class="btn-small" data-del style="background:transparent;color:var(--danger)">Borrar</button></div></div>`;
+    }).join('');
+  }
+  $('imps').addEventListener('change', e => {
+    const s = e.target.closest('[data-mes]'); if (!s) return;
+    const k = s.closest('[data-b]').dataset.b;
+    state.items.forEach(i => { if (i.src === 'resumen' && batchOf(i) === k) { if (s.value) i.mes = s.value; else delete i.mes; } });
+    persist(); render();
+    toast(s.value ? `Listo: ahora cuenta en ${monthLabel(s.value).toLowerCase()} 📅` : 'Listo: cada consumo cuenta en su fecha');
+  });
+  $('imps').addEventListener('click', e => {
+    if (!e.target.closest('[data-del]')) return;
+    const k = e.target.closest('[data-b]').dataset.b;
+    const list = state.items.filter(i => i.src === 'resumen' && batchOf(i) === k);
+    if (!confirm(`¿Borrar este resumen de ${list[0].pay}? Se eliminan sus ${list.length} consumos (${money(sumOf(list))}).`)) return;
+    state.items = state.items.filter(i => !(i.src === 'resumen' && batchOf(i) === k));
+    persist(); render(); toast('Resumen borrado');
+  });
+
   function renderSettings() {
+    renderImports();
     if (document.activeElement !== $('incIn')) $('incIn').value = state.income ? new Intl.NumberFormat('es-AR').format(state.income) : '';
     $('catList').innerHTML = state.cats.map((c, i) => `<div class="cat-edit">
       <input type="text" class="e" data-i="${i}" data-f="emoji" value="${esc(c.emoji)}" maxlength="4" aria-label="Emoji">
@@ -1413,6 +1469,14 @@ nav.tabs {
         : `⚠️ Sumé ${money(sum)} en pesos y el resumen dice ${money(meta.totalPesos)}. Puede faltar algún renglón.`;
     }
     impMeta = { found, check };
+    // Mes del resumen: si cierra en la primera quincena, sus consumos son del mes anterior (Visa 8/10 → septiembre)
+    const defMes = +stmt.slice(8) <= 15 ? shiftMonth(monthKey(stmt), -1) : monthKey(stmt);
+    const opts = [];
+    for (let n = -12; n <= 1; n++) opts.push(shiftMonth(monthKey(todayStr()), n));
+    if (!opts.includes(defMes)) opts.push(defMes);
+    $('iMes').innerHTML = opts.sort().reverse().map(k => `<option value="${k}">${monthLabel(k)}</option>`).join('') +
+      `<option value="">Según la fecha de cada consumo</option>`;
+    $('iMes').value = defMes;
     impRows = rows.map(r => {
       const dup = state.items.some(i => i.pay === pay && i.date === r.date && Math.abs(i.amount - r.amount) < 1);
       const why = r.why || (r.negative ? 'Devolución / crédito' : (r.isUsd && !(r.amount > 0)) ? 'USD sin cotización' : dup ? 'Ya cargado' : '');
@@ -1462,16 +1526,17 @@ nav.tabs {
   $('iSave').onclick = () => {
     const sel = impRows.filter(r => r.on && r.amount > 0);
     const fallback = state.cats.some(c => c.id === 'otros') ? 'otros' : state.cats[state.cats.length - 1].id;
+    const mes = $('iMes').value, imp = uid();   // imp: identifica este resumen (para cambiarle el mes o borrarlo después)
     sel.forEach(r => {
       const k = ruleKey(r.desc);
       if (k && r.cat) state.rules[k] = r.cat;   // solo se recuerda lo que elegiste vos
       if (!r.cat) r.cat = fallback;
       const note = r.desc + (r.cuota ? ` (cuota ${r.cuota})` : '') + (r.usd ? ` (U$S ${String(r.usd).replace('.', ',')})` : '');
-      state.items.push({ id: uid(), created: Date.now(), amount: Math.round(r.amount * 100) / 100, cat: r.cat, pay: r.pay, note, date: r.date, src: 'resumen' });
+      state.items.push({ id: uid(), created: Date.now(), amount: Math.round(r.amount * 100) / 100, cat: r.cat, pay: r.pay, note, date: r.date, src: 'resumen', imp, ...(mes ? { mes } : {}) });
     });
     state.lastCard = $('iPay').value;
     persist(); closeImp();
-    cur = monthKey($('iDate').value || todayStr()); render();
+    cur = mes || monthKey($('iDate').value || todayStr()); render();
     $('iText').value = '';
     toast(`¡${sel.length} consumos importados! 🎉`); burst('💳');
   };
