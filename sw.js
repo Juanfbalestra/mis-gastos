@@ -1,6 +1,6 @@
 // Guarda la app (y pdf.js cuando se usa) para que funcione sin internet.
-const CACHE = 'misgastos-v2';
-const APP = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'misgastos-v3';
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
