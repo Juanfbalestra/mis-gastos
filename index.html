@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Seguridad: la app solo puede cargar y conectarse con sus propios archivos (nada de servidores externos) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#7c3aed">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,11 +14,19 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Mis Gastos</title>
 <style>
+/* Tipografía Outfit guardada en la propia app (vendor/, licencia SIL OFL en vendor/OFL-Outfit.txt) */
+@font-face {
+  font-family: 'Outfit'; font-style: normal; font-weight: 400 800; font-display: swap;
+  src: url(vendor/outfit-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Outfit'; font-style: normal; font-weight: 400 800; font-display: swap;
+  src: url(vendor/outfit-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 :root {
   --bg: #f6f4fb;
   --card: #ffffff;
@@ -392,6 +403,24 @@ nav.tabs {
 .imp-row:first-child { border-top: 0; padding-top: 0; }
 .imp-row select { font-size: 14px; padding: 9px 10px; }
 
+/* Pantalla de PIN */
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--grad); display: grid; place-items: center; color: #fff; padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom); }
+.lock-box { width: 100%; max-width: 320px; text-align: center; }
+.lock-ic { width: 64px; height: 64px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.lock h2 { font-size: 21px; font-weight: 800; margin: 16px 0 18px; letter-spacing: -.3px; }
+.dots { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.85); transition: background .1s; }
+.dots i.on { background: #fff; }
+.dots.shake { animation: shake .35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.lock-msg { min-height: 20px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 16px 22px; justify-content: center; }
+.pad button { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff; font-size: 28px; font-weight: 500; }
+.pad button:active { background: rgba(255,255,255,.38); }
+.pad .ghost-k { background: transparent; font-size: 24px; }
+.lock-links { margin-top: 22px; display: flex; justify-content: center; gap: 22px; }
+.lock-links button { color: #fff; opacity: .9; font-size: 14px; text-decoration: underline; }
+
 /* Selección múltiple */
 .sel-toggle { width: 100%; padding: 10px; border-radius: 14px; font-size: 13.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); }
 .mov.pick .tile { transition: background .15s; }
@@ -480,7 +509,7 @@ body.selecting main { padding-bottom: 170px; }
 
   <!-- AJUSTES -->
   <section id="view-ajustes" hidden>
-    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 11 · 23/10/2026</p>
+    <p class="hint" style="text-align:center;margin:0 0 10px">Mis Gastos · versión 12 · 23/10/2026</p>
     <div class="card">
       <h2><span class="h-ic">💰</span><span>Presupuesto mensual</span></h2>
       <p class="hint">Lo que tenés para gastar por mes (por ejemplo, tu sueldo). Se ve en la tarjeta principal del Resumen.</p>
@@ -489,6 +518,13 @@ body.selecting main { padding-bottom: 170px; }
     <div class="card" id="impsCard" hidden>
       <h2><span class="h-ic">📄</span><span>Resúmenes importados<small>Elegí a qué mes corresponde cada uno, o borralo si lo cargaste mal</small></span></h2>
       <div id="imps"></div>
+    </div>
+    <div class="card">
+      <h2><span class="h-ic">🔒</span><span>Bloqueo con PIN<small id="pinState"></small></span></h2>
+      <p class="hint">Pide un PIN de 4 números al abrir la app y al volver a ella después de 1 minuto. Evita que otra persona la abra en tu celular.</p>
+      <button class="btn-line" id="pinOn">🔒 Activar PIN</button>
+      <button class="btn-line" id="pinChange">🔁 Cambiar PIN</button>
+      <button class="btn-line" id="pinOff">🔓 Quitar PIN</button>
     </div>
     <div class="card">
       <h2><span class="h-ic">💾</span><span>Respaldo</span></h2>
@@ -581,6 +617,23 @@ body.selecting main { padding-bottom: 170px; }
   <div id="catBody"></div>
 </div>
 
+<!-- Bloqueo con PIN -->
+<div class="lock" id="lock" hidden>
+  <div class="lock-box">
+    <img src="icon-180.png" class="lock-ic" alt="">
+    <h2 id="lockTitle">Ingresá tu PIN</h2>
+    <div class="dots" id="dots"></div>
+    <div class="lock-msg" id="lockMsg"></div>
+    <div class="pad" id="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <span></span><button data-k="0">0</button><button data-k="del" class="ghost-k" aria-label="Borrar">⌫</button>
+    </div>
+    <div class="lock-links"><button id="lockCancel">Cancelar</button><button id="lockForgot">Olvidé mi PIN</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -642,7 +695,7 @@ body.selecting main { padding-bottom: 170px; }
           });
           s.mesV = 1;
         }
-        return { catsV: 3, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
+        return { catsV: 3, mesV: 1, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items || [], lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income, myName: s.myName, pin: s.pin };
       }
     } catch (e) {}
     return { catsV: 3, mesV: 1, cats: DEFAULT_CATS.map(c => ({ ...c })), pays: DEFAULT_PAYS.slice(), items: [], lastBackup: null, rules: {}, budgets: {} };
@@ -1259,6 +1312,8 @@ body.selecting main { padding-bottom: 170px; }
   function renderSettings() {
     renderImports();
     if (document.activeElement !== $('incIn')) $('incIn').value = state.income ? new Intl.NumberFormat('es-AR').format(state.income) : '';
+    $('pinOn').hidden = !!state.pin; $('pinChange').hidden = $('pinOff').hidden = !state.pin;
+    $('pinState').textContent = state.pin ? 'Activado ✅' : 'Desactivado';
     $('catList').innerHTML = state.cats.map((c, i) => `<div class="cat-edit">
       <input type="text" class="e" data-i="${i}" data-f="emoji" value="${esc(c.emoji)}" maxlength="4" aria-label="Emoji">
       <input type="text" data-i="${i}" data-f="name" value="${esc(c.name)}" aria-label="Nombre">
@@ -1339,8 +1394,11 @@ body.selecting main { padding-bottom: 170px; }
       const s = JSON.parse(await f.text());
       if (!Array.isArray(s.items)) throw new Error();
       if (!confirm(`El respaldo tiene ${s.items.length} gastos. Esto reemplaza lo que hay ahora (${state.items.length}). ¿Seguir?`)) return;
-      state = { catsV: 2, cats: s.cats || DEFAULT_CATS, pays: s.pays || DEFAULT_PAYS, items: s.items, lastBackup: s.lastBackup || null, lastPay: s.lastPay, lastCard: s.lastCard, rules: s.rules || {}, budgets: s.budgets || {}, income: s.income };
-      persist(); render(); toast('Respaldo restaurado');
+      // Se guarda tal cual y se recarga: así load() aplica las actualizaciones de formato a respaldos viejos.
+      // El PIN que queda es el de este celular, no el del respaldo.
+      if (state.pin) s.pin = state.pin; else delete s.pin;
+      localStorage.setItem(KEY, JSON.stringify(s));
+      location.reload();
     } catch (err) { toast('Ese archivo no es un respaldo válido'); }
   };
 
@@ -1472,6 +1530,13 @@ body.selecting main { padding-bottom: 170px; }
     const end = lines.findIndex(l => /TENENCIAS EN D[OÓ]LARES/i.test(l));   // la parte en dólares no son gastos
     if (end > 0) lines = lines.slice(0, end);
     const piece = (l) => l && !MP_NOISE.test(l) && !MP_LINE.test(l) ? l : '';
+    // El titular de la cuenta figura en el propio resumen (renglón siguiente al título). Se usa para reconocer
+    // las transferencias a vos mismo y se guarda solo en este dispositivo: el nombre no queda en el código.
+    const hi = lines.findIndex(l => /RESUMEN DE CUENTA EN PESOS/i.test(l));
+    const holder = hi >= 0 && /^[A-Za-zÁÉÍÓÚÑáéíóúñ' ]{5,60}$/.test(lines[hi + 1] || '') ? lines[hi + 1] : '';
+    if (holder) state.myName = holder;
+    const myWords = norm(state.myName || '').split(' ').filter(w => w.length > 2);
+    const isSelf = (n) => myWords.length > 1 && myWords.filter(w => new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(n)).length >= Math.min(2, myWords.length);
     const out = [];
     lines.forEach((l, idx) => {
       const m = l.match(MP_LINE); if (!m) return;
@@ -1492,7 +1557,7 @@ body.selecting main { padding-bottom: 170px; }
       // Si es una tarjeta que no se importa (ej. la de Mercado Pago), se tilda a mano.
       const why = /PAGO AUTOMATICO TARJETA|PAGO DE TARJETA/.test(n) ? 'Pago de tarjeta: tildalo solo si NO importás el resumen de esa tarjeta'
         : /^DINERO RESERVADO/.test(n) ? 'Pasó a una reserva (ahorro)'
-        : /BALESTRA/.test(n) && /JUAN/.test(n) ? 'Transferencia a tu propia cuenta'
+        : isSelf(n) ? 'Transferencia a tu propia cuenta'
         : /BALANZ|CAPITAL VALORES|INVERSION|\bIOL\b|COCOS CAPITAL|\bPPI\b/.test(n) ? 'Inversión'
         : '';
       out.push({ date: `${m[3]}-${m[2]}-${m[1]}`, desc: name, amount: -value, why });
@@ -1672,12 +1737,13 @@ body.selecting main { padding-bottom: 170px; }
       analyze(await pdfToText(buf));
     } catch (err) {
       console.error(err);
-      toast(err && err.message === 'nolib' ? 'Para leer PDFs hace falta internet la primera vez' : 'No pude leer el PDF. Probá pegando el texto.');
+      toast(err && err.message === 'nolib' ? 'No pude abrir el lector de PDF. Cerrá y abrí la app con internet.' : 'No pude leer el PDF. Probá pegando el texto.');
     }
   };
 
-  // pdf.js se carga solo cuando hace falta (y queda en caché para usarlo offline)
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  // pdf.js 3.11.174 guardado en la propia app (vendor/, verificado contra el SHA-512 publicado por cdnjs).
+  // Se carga solo cuando hace falta y queda en caché para usarlo sin internet.
+  const PDFJS = 'vendor/';
   function loadPdfJs() {
     if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
     return new Promise((res, rej) => {
@@ -1690,7 +1756,8 @@ body.selecting main { padding-bottom: 170px; }
   }
   async function pdfToText(buf) {
     const lib = await loadPdfJs();
-    const task = lib.getDocument({ data: buf });
+    // isEvalSupported: false → pdf.js no genera código al vuelo (más seguro, y lo exige la política de seguridad)
+    const task = lib.getDocument({ data: buf, isEvalSupported: false });
     // Muchos bancos protegen el PDF con el DNI
     task.onPassword = (update, reason) => {
       const pw = prompt(reason === 2 ? 'Clave incorrecta. Probá de nuevo:' : 'El PDF tiene clave (suele ser tu DNI):');
@@ -1715,12 +1782,87 @@ body.selecting main { padding-bottom: 170px; }
     return lines.join('\n');
   }
 
+  // ---------- Bloqueo con PIN ----------
+  // Se guarda solo una huella SHA-256 del PIN (con sal aleatoria), nunca el PIN.
+  const PIN_LEN = 4;
+  let pinMode = null, pinBuf = '', pinFirst = '', pinNext = null, hiddenAt = 0;
+  // Intentos fallidos guardados aparte: recargar la app no reinicia la espera
+  const LOCK_KEY = 'misgastos.intentos';
+  const tries = () => { try { return JSON.parse(localStorage.getItem(LOCK_KEY)) || { fails: 0, until: 0 }; } catch (e) { return { fails: 0, until: 0 }; } };
+  const setTries = (t) => { try { localStorage.setItem(LOCK_KEY, JSON.stringify(t)); } catch (e) {} };
+  async function pinHash(pin, salt) {
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${pin}`));
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  function drawDots(err) {
+    $('dots').innerHTML = Array.from({ length: PIN_LEN }, (_, i) => `<i class="${i < pinBuf.length ? 'on' : ''}"></i>`).join('');
+    $('dots').classList.remove('shake');
+    if (err) { void $('dots').offsetWidth; $('dots').classList.add('shake'); }
+  }
+  // mode: 'unlock' (al abrir) | 'verify' (antes de cambiar/quitar) | 'set1' / 'set2' (elegir y repetir)
+  function showLock(mode, title, next, msg = '') {
+    pinMode = mode; pinNext = next || null; pinBuf = '';
+    $('lockTitle').textContent = title; $('lockMsg').textContent = msg;
+    $('lockForgot').hidden = mode !== 'unlock'; $('lockCancel').hidden = mode === 'unlock';
+    $('lock').hidden = false; drawDots(!!msg);
+  }
+  function hideLock() { $('lock').hidden = true; pinMode = null; pinBuf = ''; }
+  async function pinEntered() {
+    const pin = pinBuf; pinBuf = '';
+    if (pinMode === 'unlock' || pinMode === 'verify') {
+      const t = tries();
+      if (Date.now() < t.until) { $('lockMsg').textContent = `Demasiados intentos. Esperá ${Math.ceil((t.until - Date.now()) / 1000)} segundos`; drawDots(true); return; }
+      if ((await pinHash(pin, state.pin.salt)) !== state.pin.hash) {
+        if (++t.fails >= 5) { t.until = Date.now() + 30000; t.fails = 0; }
+        setTries(t);
+        $('lockMsg').textContent = 'PIN incorrecto'; drawDots(true); return;
+      }
+      setTries({ fails: 0, until: 0 });
+      const next = pinNext; hideLock(); if (next) next();
+    } else if (pinMode === 'set1') {
+      pinFirst = pin; showLock('set2', 'Repetí el PIN', pinNext);
+    } else if (pinMode === 'set2') {
+      if (pin !== pinFirst) return showLock('set1', 'Elegí un PIN de 4 números', null, 'No coinciden, probá de nuevo');
+      const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+      const had = !!state.pin;
+      state.pin = { salt, hash: await pinHash(pin, salt) };
+      persist(); hideLock(); renderSettings(); toast(had ? '🔁 PIN cambiado' : '🔒 PIN activado');
+    }
+  }
+  function pinKey(k) {
+    if (!pinMode) return;
+    if (k === 'del') pinBuf = pinBuf.slice(0, -1);
+    else if (pinBuf.length < PIN_LEN) pinBuf += k;
+    drawDots();
+    if (pinBuf.length === PIN_LEN) setTimeout(pinEntered, 120);
+  }
+  $('pad').addEventListener('click', e => { const b = e.target.closest('button'); if (b) pinKey(b.dataset.k); });
+  document.addEventListener('keydown', e => {
+    if ($('lock').hidden) return;
+    if (/^[0-9]$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del');
+  });
+  $('lockCancel').onclick = hideLock;
+  $('lockForgot').onclick = () => {
+    if (!confirm('Sin el PIN no se puede entrar. Lo único posible es borrar los datos de este celular y empezar de nuevo (después podés restaurar tu último respaldo). ¿Borrar todo?')) return;
+    if (!confirm('¿Seguro? Se borra todo lo cargado en este celular.')) return;
+    localStorage.removeItem(KEY); localStorage.removeItem(LOCK_KEY); location.reload();
+  };
+  $('pinOn').onclick = () => showLock('set1', 'Elegí un PIN de 4 números');
+  $('pinChange').onclick = () => showLock('verify', 'Ingresá tu PIN actual', () => showLock('set1', 'Elegí el PIN nuevo'));
+  $('pinOff').onclick = () => showLock('verify', 'Ingresá tu PIN actual', () => { delete state.pin; persist(); renderSettings(); toast('🔓 PIN quitado'); });
+  // Se vuelve a pedir si la app estuvo en segundo plano más de 1 minuto
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hiddenAt = Date.now();
+    else if (state.pin && hiddenAt && Date.now() - hiddenAt > 60000 && $('lock').hidden) showLock('unlock', 'Ingresá tu PIN');
+  });
+
   // ---------- Offline ----------
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
   render();
+  if (state.pin) showLock('unlock', 'Ingresá tu PIN');
 })();
 </script>
 </body>

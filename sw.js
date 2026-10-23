@@ -1,6 +1,7 @@
-// Guarda la app (y pdf.js cuando se usa) para que funcione sin internet.
-const CACHE = 'misgastos-v11';
-const APP = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
+// Guarda la app completa (incluido el lector de PDF y la tipografía) para que funcione sin internet.
+const CACHE = 'misgastos-v12';
+const APP = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png',
+  'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'vendor/outfit-latin.woff2', 'vendor/outfit-latin-ext.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));

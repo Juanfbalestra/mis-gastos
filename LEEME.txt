@@ -6,7 +6,8 @@ Qué hay en esta carpeta
   index.html            La app completa.
   sw.js                 Hace que funcione sin internet.
   manifest.webmanifest  Nombre y colores para instalarla como app.
-  icon.svg              El ícono.
+  icon.svg / icon-*.png Los íconos.
+  vendor/               Lector de PDF y tipografía, guardados dentro de la app.
   Abrir Mis Gastos.bat  Doble clic para usarla en esta PC.
 
 Cómo se usa
@@ -23,6 +24,18 @@ Tus datos
   (el celular y la PC tienen cada uno los suyos, no se sincronizan).
   Una vez por mes: Ajustes > "Descargar respaldo completo" y guardalo en Drive.
   Si cambiás de celular: Ajustes > "Restaurar desde respaldo".
+
+Seguridad
+---------
+  - La app no se conecta con ningún servidor externo: el lector de PDF (pdf.js 3.11.174,
+    verificado contra su huella SHA-512 oficial) y la tipografía están en la carpeta vendor/.
+    Una regla de seguridad (Content-Security-Policy) le prohíbe cargar cualquier otra cosa.
+  - Los PDF se leen en el celular; no se suben a ningún lado.
+  - PIN opcional (Ajustes > Bloqueo con PIN): se guarda solo una huella SHA-256, no el PIN.
+    Ojo: el PIN evita que otra persona abra la app, pero los datos del celular no van encriptados.
+  - Tu nombre no está en el código: para reconocer transferencias a vos mismo, la app lo lee
+    del propio resumen de Mercado Pago y lo guarda solo en el celular.
+  - Recomendado: verificación en dos pasos (2FA) activada en tu cuenta de GitHub.
 
 Para usarla en el celular
 -------------------------
